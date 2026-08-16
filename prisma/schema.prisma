@@ -1,0 +1,147 @@
+// Dev uses SQLite for zero-friction local setup.
+// Swap provider to "postgresql" + set DATABASE_URL when moving toward production
+// (see the product sketch: Postgres + PostGIS is the planned v1 datastore).
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  age          Int?
+  gender       String?
+  homeLocation String?
+  planTier     String   @default("free") // free | pro
+  isAdmin      Boolean  @default(false)
+  avgRating    Float    @default(0)
+  ratingCount  Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  listings        Listing[]
+  initiatedThreads Thread[]  @relation("Initiator")
+  ownedThreads    Thread[]  @relation("ThreadOwner")
+  messages        Message[]
+  ratingsGiven    Rating[]  @relation("Rater")
+  ratingsReceived Rating[]  @relation("Ratee")
+  reports         Report[]
+}
+
+model Category {
+  id       String     @id @default(cuid())
+  parentId String?
+  name     String
+  slug     String     @unique
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  listings Listing[]
+}
+
+model Listing {
+  id          String  @id @default(cuid())
+  ownerId     String
+  owner       User    @relation(fields: [ownerId], references: [id])
+  listingType String  // opportunity | plan
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  title       String
+  description String
+  location    String
+  lat         Float?
+  lng         Float?
+
+  dateStart DateTime
+  dateEnd   DateTime
+
+  price    Float?
+  currency String @default("EUR")
+  capacity Int    @default(1)
+
+  minAge           Int?
+  maxAge           Int?
+  genderPreference String @default("any") // any | men | women
+
+  moderationStatus String @default("pending") // pending | published | flagged | rejected
+  moderationNotes  String?
+  status           String @default("active") // active | closed | expired
+  boosted          Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  photos  ListingPhoto[]
+  threads Thread[]
+
+  @@index([categoryId])
+  @@index([dateStart, dateEnd])
+  @@index([moderationStatus, status])
+}
+
+model ListingPhoto {
+  id        String  @id @default(cuid())
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id])
+  url       String
+  sortOrder Int     @default(0)
+}
+
+model Thread {
+  id          String @id @default(cuid())
+  listingId   String
+  listing     Listing @relation(fields: [listingId], references: [id])
+  initiatorId String
+  initiator   User    @relation("Initiator", fields: [initiatorId], references: [id])
+  ownerId     String
+  owner       User    @relation("ThreadOwner", fields: [ownerId], references: [id])
+  status      String  @default("open") // open | closed
+  createdAt   DateTime @default(now())
+
+  messages Message[]
+  ratings  Rating[]
+
+  @@unique([listingId, initiatorId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  threadId  String
+  thread    Thread   @relation(fields: [threadId], references: [id])
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([threadId])
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  threadId  String
+  thread    Thread   @relation(fields: [threadId], references: [id])
+  raterId   String
+  rater     User     @relation("Rater", fields: [raterId], references: [id])
+  rateeId   String
+  ratee     User     @relation("Ratee", fields: [rateeId], references: [id])
+  score     Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@unique([threadId, raterId])
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  reporterId String
+  reporter   User     @relation(fields: [reporterId], references: [id])
+  targetType String // listing | user | message
+  targetId   String
+  reason     String
+  status     String   @default("open") // open | resolved | dismissed
+  createdAt  DateTime @default(now())
+}

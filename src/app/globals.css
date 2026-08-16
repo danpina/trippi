@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+::selection {
+  background: theme(colors.ember);
+  color: white;
+}
+
+body {
+  background: theme(colors.mist);
+  color: theme(colors.ink);
+  font-feature-settings: "ss01" 1;
+}
+
+:focus-visible {
+  outline: 2px solid theme(colors.ember);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.card {
+  background: theme(colors.paper);
+  border: 1px solid theme(colors.line);
+  border-radius: 1.25rem;
+  box-shadow: theme(boxShadow.card);
+}
+
+.btn-primary {
+  background: theme(colors.ember);
+  color: white;
+  border-radius: 999px;
+  padding: 0.7rem 1.4rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: -0.01em;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  box-shadow: 0 6px 16px -6px rgba(255, 90, 54, 0.55);
+}
+.btn-primary:hover {
+  background: theme(colors.ember-deep);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: theme(colors.paper);
+  color: theme(colors.ink);
+  border: 1.5px solid theme(colors.line);
+  border-radius: 999px;
+  padding: 0.65rem 1.35rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.btn-secondary:hover {
+  border-color: theme(colors.ink);
+  transform: translateY(-1px);
+}
+
+.input {
+  background: theme(colors.paper);
+  border: 1.5px solid theme(colors.line);
+  border-radius: 0.85rem;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.92rem;
+  width: 100%;
+  color: theme(colors.ink);
+  transition: border-color 0.15s ease;
+}
+.input::placeholder {
+  color: theme(colors.slate);
+  opacity: 0.7;
+}
+.input:focus {
+  outline: none;
+  border-color: theme(colors.ember);
+  box-shadow: 0 0 0 3px theme(colors.ember-soft);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: theme(colors.glacier-soft);
+  color: theme(colors.glacier-deep);
+}
+.tag.tag-warm {
+  background: theme(colors.gold-soft);
+  color: #8a5a00;
+}
+.tag.tag-ember {
+  background: theme(colors.ember-soft);
+  color: theme(colors.ember-deep);
+}
+
+.hairline {
+  border-color: theme(colors.line);
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Ambient hero gradient blobs — decorative, aria-hidden, respects reduced motion via the rule above */
+.blob {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(60px);
+  opacity: 0.55;
+  pointer-events: none;
+}
