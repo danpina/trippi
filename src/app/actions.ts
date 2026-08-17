@@ -194,6 +194,35 @@ export async function submitRatingAction(formData: FormData) {
   revalidatePath(`/messages/${threadId}`);
 }
 
+export type ReportState = { success?: boolean; error?: string } | undefined;
+
+const REPORT_TARGET_TYPES = new Set(["listing", "user"]);
+
+export async function submitReportAction(prevState: ReportState, formData: FormData): Promise<ReportState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "You must be logged in to report something." };
+
+  const targetType = String(formData.get("targetType") || "");
+  const targetId = String(formData.get("targetId") || "");
+  const reasonCode = String(formData.get("reasonCode") || "");
+  const details = String(formData.get("details") || "").trim();
+
+  if (!REPORT_TARGET_TYPES.has(targetType) || !targetId) return { error: "Invalid report target." };
+  if (!reasonCode) return { error: "Please select a reason." };
+
+  await db.report.create({
+    data: {
+      reporterId: user.id,
+      targetType,
+      targetId,
+      reason: details ? `${reasonCode} — ${details}` : reasonCode,
+    },
+  });
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
 export async function adminModerateAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user?.isAdmin) throw new Error("Admin only.");
@@ -205,6 +234,16 @@ export async function adminModerateAction(formData: FormData) {
     where: { id: listingId },
     data: { moderationStatus: decision === "approve" ? "published" : "rejected" },
   });
+
+  revalidatePath("/admin");
+}
+
+export async function dismissReportAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user?.isAdmin) throw new Error("Admin only.");
+
+  const reportId = String(formData.get("reportId") || "");
+  await db.report.update({ where: { id: reportId }, data: { status: "dismissed" } });
 
   revalidatePath("/admin");
 }

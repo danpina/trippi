@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { adminModerateAction } from "@/app/actions";
+import { adminModerateAction, dismissReportAction } from "@/app/actions";
 
 export default async function AdminPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/admin");
   if (!user.isAdmin) redirect("/");
 
-  const [flagged, pending, reports] = await Promise.all([
+  const [flagged, pending, rawReports] = await Promise.all([
     db.listing.findMany({
       where: { moderationStatus: "flagged" },
       orderBy: { createdAt: "desc" },
@@ -19,8 +19,31 @@ export default async function AdminPage() {
       orderBy: { createdAt: "desc" },
       include: { owner: true, category: true },
     }),
-    db.report.findMany({ where: { status: "open" }, orderBy: { createdAt: "desc" }, take: 20 }),
+    db.report.findMany({
+      where: { status: "open" },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: { reporter: true },
+    }),
   ]);
+
+  // Report targets are polymorphic (listing | user) rather than a real FK, so resolve a
+  // human-readable label per report separately instead of a join.
+  const reports = await Promise.all(
+    rawReports.map(async (r) => {
+      let targetLabel = r.targetId;
+      let targetHref: string | null = null;
+      if (r.targetType === "listing") {
+        const l = await db.listing.findUnique({ where: { id: r.targetId } });
+        targetLabel = l?.title ?? "(listing no longer exists)";
+        targetHref = l ? `/listings/${l.id}` : null;
+      } else if (r.targetType === "user") {
+        const u = await db.user.findUnique({ where: { id: r.targetId } });
+        targetLabel = u?.name ?? "(user no longer exists)";
+      }
+      return { ...r, targetLabel, targetHref };
+    })
+  );
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-14 space-y-12">
@@ -96,10 +119,29 @@ export default async function AdminPage() {
           <span className="tag">{reports.length}</span>
         </div>
         {reports.length === 0 && <p className="text-sm text-slate">No open reports.</p>}
-        <div className="space-y-2">
+        <div className="space-y-3">
           {reports.map((r) => (
-            <div key={r.id} className="card p-4 text-sm">
-              <strong>{r.targetType}</strong> {r.targetId} — {r.reason}
+            <div key={r.id} className="card p-4">
+              <div className="flex justify-between items-start gap-4">
+                <div className="text-sm">
+                  <span className="tag tag-warm">{r.targetType}</span>{" "}
+                  {r.targetHref ? (
+                    <a href={r.targetHref} className="font-semibold text-ink hover:text-ember">
+                      {r.targetLabel}
+                    </a>
+                  ) : (
+                    <span className="font-semibold text-ink">{r.targetLabel}</span>
+                  )}
+                  <div className="text-slate mt-1">{r.reason}</div>
+                  <div className="text-xs text-slate mt-1">
+                    reported by {r.reporter.name} · {new Date(r.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+                <form action={dismissReportAction} className="shrink-0">
+                  <input type="hidden" name="reportId" value={r.id} />
+                  <button className="btn-secondary !py-1.5 !px-3 text-xs">Dismiss</button>
+                </form>
+              </div>
             </div>
           ))}
         </div>

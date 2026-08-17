@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { contactOwnerAction } from "@/app/actions";
 import CategoryArt from "@/components/CategoryArt";
+import ReportForm from "@/components/ReportForm";
 
 export default async function ListingDetailPage({ params }: { params: { id: string } }) {
   const listing = await db.listing.findUnique({
@@ -142,6 +143,7 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
                 to contact the host — searching is open to everyone, but conversations require an account.
               </div>
             )}
+            {user && <ReportForm targetType="listing" targetId={listing.id} label="Report this listing" />}
           </div>
         )}
       </div>
