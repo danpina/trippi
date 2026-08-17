@@ -7,15 +7,20 @@ import { createSessionCookie, clearSessionCookie, getCurrentUser, hashPassword, 
 import { runModerationRules } from "@/lib/moderation";
 import { recomputeUserRating } from "@/lib/ratings";
 
-export async function registerAction(formData: FormData) {
+// Expected, user-facing failures (bad password, duplicate email) are returned as form state
+// rather than thrown — Next.js redacts thrown Server Action errors in production down to a
+// generic "server-side exception" page, which is right for real bugs but wrong for validation.
+export type AuthState = { error?: string } | undefined;
+
+export async function registerAction(prevState: AuthState, formData: FormData): Promise<AuthState> {
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
   const name = String(formData.get("name") || "").trim();
 
-  if (!email || !password || !name) throw new Error("Missing fields");
+  if (!email || !password || !name) return { error: "Please fill in all fields." };
 
   const existing = await db.user.findUnique({ where: { email } });
-  if (existing) throw new Error("An account with that email already exists.");
+  if (existing) return { error: "An account with that email already exists." };
 
   const user = await db.user.create({
     data: {
@@ -30,13 +35,13 @@ export async function registerAction(formData: FormData) {
   redirect("/");
 }
 
-export async function loginAction(formData: FormData) {
+export async function loginAction(prevState: AuthState, formData: FormData): Promise<AuthState> {
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
 
   const user = await db.user.findUnique({ where: { email } });
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    throw new Error("Invalid email or password.");
+    return { error: "Invalid email or password." };
   }
 
   createSessionCookie(user.id);
