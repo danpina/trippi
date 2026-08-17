@@ -1,12 +1,9 @@
-// Dev uses SQLite for zero-friction local setup.
-// Swap provider to "postgresql" + set DATABASE_URL when moving toward production
-// (see the product sketch: Postgres + PostGIS is the planned v1 datastore).
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

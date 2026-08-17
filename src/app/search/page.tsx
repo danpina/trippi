@@ -54,9 +54,9 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
   if (categoryIds) where.categoryId = { in: categoryIds };
   if (searchParams.q) {
     where.OR = [
-      { title: { contains: searchParams.q } },
-      { description: { contains: searchParams.q } },
-      { location: { contains: searchParams.q } },
+      { title: { contains: searchParams.q, mode: "insensitive" } },
+      { description: { contains: searchParams.q, mode: "insensitive" } },
+      { location: { contains: searchParams.q, mode: "insensitive" } },
     ];
   }
   if (searchParams.dateFrom) where.dateEnd = { gte: new Date(searchParams.dateFrom) };
