@@ -87,22 +87,41 @@ database on Supabase.
 2. Create a [Vercel](https://vercel.com) account (sign in with GitHub) and import this repo —
    it auto-detects Next.js, no build config needed.
 3. In the Vercel project's environment variables, set:
-   - `DATABASE_URL` — the Postgres connection string from step 1
+   - `DATABASE_URL` — pooled connection string, see the Supabase note below for the exact form
+   - `DIRECT_URL` — unpooled connection string, same note
    - `SESSION_SECRET` — a random 32+ byte value, e.g.
      `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
    - `ADMIN_EMAIL` — whichever email should be auto-promoted to admin on first registration
    - `NEXT_PUBLIC_MAPTILER_KEY` — your MapTiler key
-4. Push the schema to the production database once (from your machine, with `DATABASE_URL`
-   pointed at production): `npx prisma db push`, then `npm run db:seed` if you want the
-   category taxonomy (and demo listings) in place before the first deploy.
+4. Push the schema to the production database once (from your machine, with `DATABASE_URL`/
+   `DIRECT_URL` pointed at production): `npx prisma db push`, then `npm run db:seed` if you
+   want the category taxonomy (and demo listings) in place before the first deploy.
 5. Deploy. Vercel gives you a live `*.vercel.app` URL; add a custom domain under the project's
    Domains settings whenever you're ready.
 
-**Supabase connection gotcha:** Supabase's "Direct connection" host (`db.<ref>.supabase.co`)
-only has an IPv6 address unless you pay for the IPv4 add-on — it'll fail outright (`ENOTFOUND`)
-on any IPv4-only network. Use the pooler host instead
-(`aws-0-<region>.pooler.supabase.com`), and mind the port: **6543 is transaction-mode**, which
-doesn't support the connection type `prisma db push`/`migrate` needs and fails with
-`P1017: Server has closed the connection`; **5432 on that same pooler host is session-mode**,
-which works for both migrations and normal app queries. `DATABASE_URL` here uses the session
-pooler on 5432 for exactly that reason.
+**Supabase connection setup — this app uses two different connection strings, and getting it
+wrong causes two different failure modes:**
+
+- Supabase's "Direct connection" host (`db.<ref>.supabase.co`) only has an IPv6 address unless
+  you pay for the IPv4 add-on — fails outright (`ENOTFOUND`) on any IPv4-only network. Always
+  use the pooler host instead: `aws-0-<region>.pooler.supabase.com`.
+- On that pooler host, **port 6543 is transaction mode** — this is what `DATABASE_URL` (the
+  app's runtime queries) must use, with `?pgbouncer=true` appended. Transaction mode
+  multiplexes many short-lived connections over a small shared pool, which is what a
+  serverless app actually needs — Vercel spins up many short-lived function instances, and
+  each one wants its own DB connection.
+- **Port 5432 on the same host is session mode** — this is what `DIRECT_URL` must use, no
+  `pgbouncer` param. `prisma db push`/`migrate` need session mode; it doesn't multiplex.
+- Using session mode (5432) for `DATABASE_URL` — i.e. the app's runtime queries — is the trap:
+  it works fine at first, then fails under any real concurrency with
+  `FATAL: max clients reached in session mode, max clients are limited to pool_size: 15`,
+  because each serverless invocation holds its own connection instead of sharing a pool. This
+  broke *every* page on the live site, not just one — it just surfaces wherever you happen to
+  click first.
+- Using transaction mode (6543) for `DIRECT_URL` — i.e. migrations — fails differently:
+  `P1017: Server has closed the connection`, because transaction mode doesn't support the kind
+  of connection `prisma db push` needs.
+
+`prisma/schema.prisma`'s `datasource` block declares both `url` (→ `DATABASE_URL`) and
+`directUrl` (→ `DIRECT_URL`) for exactly this split — Prisma uses `directUrl` automatically for
+migration commands and `url` for everything else.
