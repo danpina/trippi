@@ -42,8 +42,10 @@ Without it, the map panel shows a placeholder instead of failing.
 
 Demo accounts (from the seed):
 - Host: `chamonix.chalet@example.com` / `demo1234`
-- Admin: `admin@tripswap.dev` / `admin1234` (or whatever `ADMIN_EMAIL` you set — the first user to
-  register with that email is auto-promoted to admin)
+- Test/buyer: `test@tripswap.dev` / `test1234` — plain account, not an owner or admin, for
+  testing the search/contact/rate side without needing a fresh signup each time
+- Admin: whatever `ADMIN_EMAIL` you set / `admin1234` — the first user to register with that
+  email is auto-promoted to admin
 
 ## What's implemented
 

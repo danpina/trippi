@@ -6,3 +6,4 @@ dev.db-journal
 .env.local
 *.log
 .claude/settings.local.json
+tsconfig.tsbuildinfo

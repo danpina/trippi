@@ -62,6 +62,17 @@ async function main() {
     },
   });
 
+  // Plain non-owner, non-admin account for testing the buyer/searcher side.
+  await prisma.user.upsert({
+    where: { email: "test@tripswap.dev" },
+    update: {},
+    create: {
+      email: "test@tripswap.dev",
+      name: "Test User",
+      passwordHash: await bcrypt.hash("test1234", 10),
+    },
+  });
+
   const ski = await prisma.category.findUniqueOrThrow({ where: { slug: "snow-and-ski-downhill" } });
   const golf = await prisma.category.findUniqueOrThrow({ where: { slug: "golf-golf-trip" } });
   const run = await prisma.category.findUniqueOrThrow({ where: { slug: "running-and-athletics-road-running" } });
