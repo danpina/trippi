@@ -17,41 +17,36 @@ export default async function HomePage() {
 
   return (
     <div>
-      {/* Hero — alpenglow: warm light breaking over a dark ridgeline */}
+      {/* Hero — search-first, like BlaBlaCar/Airbnb/Kleinanzeigen: the search bar carries the
+          page, not a headline. Alpenglow mood kept in a strip, not a slab. */}
       <section className="relative overflow-hidden bg-ink text-white">
         <div
           aria-hidden
-          className="blob w-[36rem] h-[36rem] -top-32 -right-24 bg-ember animate-drift"
+          className="blob w-[30rem] h-[30rem] -top-40 -right-24 bg-ember animate-drift"
         />
         <div
           aria-hidden
-          className="blob w-[28rem] h-[28rem] -bottom-40 -left-24 bg-glacier animate-drift-slow"
-        />
-        <div
-          aria-hidden
-          className="blob w-[20rem] h-[20rem] top-1/3 left-1/2 bg-gold opacity-20 animate-drift"
+          className="blob w-[22rem] h-[22rem] -bottom-32 -left-20 bg-glacier animate-drift-slow"
         />
 
-        <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-24 md:pt-28 md:pb-32">
-          <p className="eyebrow text-glacier animate-fade-up">Spare bookings · spare weekends</p>
-
-          <h1 className="font-display text-[2.75rem] leading-[1.05] sm:text-6xl md:text-7xl font-medium mt-4 max-w-3xl text-balance animate-fade-up [animation-delay:80ms]">
-            Someone else&apos;s cancelled trip is your{" "}
-            <span className="italic bg-gradient-to-r from-ember to-gold bg-clip-text text-transparent">
-              open weekend
-            </span>
-            .
-          </h1>
-
-          <p className="text-white/70 text-lg mt-6 max-w-xl animate-fade-up [animation-delay:160ms]">
-            Real spare bookings and loose weekend plans across skiing, hiking, golf, cycling, running and more —
-            browse for free, post the one you can no longer use.
-          </p>
+        <div className="relative max-w-6xl mx-auto px-6 pt-8 pb-8 md:pt-10 md:pb-10">
+          <div className="flex items-baseline justify-between gap-4 flex-wrap animate-fade-up">
+            <h1 className="font-display italic text-xl sm:text-2xl font-medium text-balance">
+              Someone&apos;s cancelled trip is your{" "}
+              <span className="bg-gradient-to-r from-ember to-gold bg-clip-text text-transparent">
+                open weekend
+              </span>
+              .
+            </h1>
+            <p className="text-white/60 text-xs uppercase tracking-wide font-semibold">
+              Free to search · post what you can&apos;t use
+            </p>
+          </div>
 
           <form
             action="/search"
             method="GET"
-            className="mt-10 flex flex-col sm:flex-row gap-2 bg-white/10 backdrop-blur-xl border border-white/15 rounded-2xl sm:rounded-full p-2 max-w-2xl shadow-glow animate-fade-up [animation-delay:240ms]"
+            className="mt-4 flex flex-col sm:flex-row gap-2 bg-white/10 backdrop-blur-xl border border-white/15 rounded-2xl sm:rounded-full p-2 max-w-2xl shadow-glow animate-fade-up [animation-delay:80ms]"
           >
             <input
               name="q"
@@ -72,7 +67,7 @@ export default async function HomePage() {
             <button className="btn-primary sm:!px-7 shrink-0">Search</button>
           </form>
 
-          <div className="flex flex-wrap gap-2 mt-6 animate-fade-up [animation-delay:320ms]">
+          <div className="flex flex-wrap gap-2 mt-4 animate-fade-up [animation-delay:140ms]">
             {categories.map((c) => {
               const s = styleFor(c.slug);
               return (
