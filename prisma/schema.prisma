@@ -29,6 +29,7 @@ model User {
   ratingsGiven    Rating[]  @relation("Rater")
   ratingsReceived Rating[]  @relation("Ratee")
   reports         Report[]
+  savedListings   SavedListing[]
 }
 
 model Category {
@@ -58,9 +59,10 @@ model Listing {
   dateStart DateTime
   dateEnd   DateTime
 
-  price    Float?
-  currency String @default("EUR")
-  capacity Int    @default(1)
+  price            Float?
+  priceNegotiable  Boolean @default(false)
+  currency         String  @default("EUR")
+  capacity         Int     @default(1)
 
   minAge           Int?
   maxAge           Int?
@@ -75,6 +77,7 @@ model Listing {
 
   photos  ListingPhoto[]
   threads Thread[]
+  savedBy SavedListing[]
 
   @@index([categoryId])
   @@index([dateStart, dateEnd])
@@ -131,6 +134,17 @@ model Rating {
   createdAt DateTime @default(now())
 
   @@unique([threadId, raterId])
+}
+
+model SavedListing {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
 }
 
 model Report {

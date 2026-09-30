@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { logoutAction } from "@/app/actions";
+import TrustedBadge from "@/components/TrustedBadge";
+import { isTrustedHost } from "@/lib/trust";
 
 export default async function Nav() {
   const user = await getCurrentUser();
@@ -31,13 +33,17 @@ export default async function Nav() {
               <Link href="/messages" className="hidden sm:inline-block px-3 py-2 text-ink/80 hover:text-ink font-semibold">
                 Messages
               </Link>
+              <Link href="/saved" className="hidden sm:inline-block px-3 py-2 text-ink/80 hover:text-ink font-semibold">
+                Saved
+              </Link>
               {user.isAdmin && (
                 <Link href="/admin" className="px-3 py-2 text-ember font-bold">
                   Admin
                 </Link>
               )}
-              <span className="hidden md:flex items-center gap-1 px-3 text-sm text-slate">
+              <span className="hidden md:flex items-center gap-1.5 px-3 text-sm text-slate">
                 {user.name}
+                {isTrustedHost(user) && <TrustedBadge />}
                 {user.ratingCount > 0 && (
                   <span className="inline-flex items-center gap-0.5 text-gold font-bold">
                     <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 fill-gold">

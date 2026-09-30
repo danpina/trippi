@@ -96,6 +96,11 @@ export default async function NewListingPage() {
           </div>
         </div>
 
+        <label className="flex items-center gap-2 text-sm text-ink/85 -mt-2">
+          <input type="checkbox" name="priceNegotiable" className="accent-ember" />
+          Price is negotiable
+        </label>
+
         <fieldset className="border border-line rounded-xl p-4">
           <legend className="eyebrow text-slate px-1">Filtering preferences (optional, never a requirement to contact)</legend>
           <div className="grid grid-cols-3 gap-3 mt-1">

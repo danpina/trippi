@@ -4,6 +4,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { contactOwnerAction } from "@/app/actions";
 import CategoryArt from "@/components/CategoryArt";
 import ReportForm from "@/components/ReportForm";
+import SaveButton from "@/components/SaveButton";
+import TrustedBadge from "@/components/TrustedBadge";
+import { isTrustedHost } from "@/lib/trust";
 
 export default async function ListingDetailPage({ params }: { params: { id: string } }) {
   const listing = await db.listing.findUnique({
@@ -21,22 +24,38 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
   const canView = listing.moderationStatus === "published" || isOwner || user?.isAdmin;
   if (!canView) notFound();
 
+  const saved = user
+    ? !!(await db.savedListing.findUnique({
+        where: { userId_listingId: { userId: user.id, listingId: listing.id } },
+      }))
+    : false;
+
   const topSlug = listing.category.parent?.slug ?? listing.category.slug;
 
   return (
     <div>
-      {listing.photos.length > 0 ? (
-        <div className="grid grid-cols-2 gap-1 max-h-[26rem] overflow-hidden">
-          <img src={listing.photos[0].url} alt="" className="w-full h-full object-cover" />
-          <div className="grid grid-rows-2 gap-1">
-            {listing.photos.slice(1, 3).map((p) => (
-              <img key={p.id} src={p.url} alt="" className="w-full h-full object-cover" />
-            ))}
+      <div className="relative">
+        {user && !isOwner && (
+          <SaveButton
+            listingId={listing.id}
+            saved={saved}
+            path={`/listings/${listing.id}`}
+            className="absolute top-4 right-4 z-10"
+          />
+        )}
+        {listing.photos.length > 0 ? (
+          <div className="grid grid-cols-2 gap-1 max-h-[26rem] overflow-hidden">
+            <img src={listing.photos[0].url} alt="" className="w-full h-full object-cover" />
+            <div className="grid grid-rows-2 gap-1">
+              {listing.photos.slice(1, 3).map((p) => (
+                <img key={p.id} src={p.url} alt="" className="w-full h-full object-cover" />
+              ))}
+            </div>
           </div>
-        </div>
-      ) : (
-        <CategoryArt topSlug={topSlug} className="w-full h-72" />
-      )}
+        ) : (
+          <CategoryArt topSlug={topSlug} className="w-full h-72" />
+        )}
+      </div>
 
       <div className="max-w-4xl mx-auto px-6 py-10">
         {listing.moderationStatus !== "published" && (isOwner || user?.isAdmin) && (
@@ -67,6 +86,9 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
             <div className="eyebrow text-slate">Price</div>
             <div className="mt-1 font-bold font-display text-lg tabular-nums">
               {listing.price ? `€${listing.price}` : "Free"}
+              {listing.priceNegotiable && (
+                <span className="block text-xs font-body font-semibold text-slate mt-0.5">Negotiable</span>
+              )}
             </div>
           </div>
           <div className="card p-4">
@@ -102,7 +124,10 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
               {listing.owner.name[0]}
             </div>
             <div>
-              <div className="font-bold">{listing.owner.name}</div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold">{listing.owner.name}</span>
+                {isTrustedHost(listing.owner) && <TrustedBadge />}
+              </div>
               <div className="text-sm text-slate flex items-center gap-1">
                 {listing.owner.ratingCount > 0 ? (
                   <>
@@ -134,6 +159,13 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
                   placeholder="Hi! Is this still available? I'd love to..."
                 />
                 <button className="btn-primary mt-3">Contact</button>
+                <p className="text-xs text-slate mt-3">
+                  Meeting up or arranging payment?{" "}
+                  <a href="/safety" className="text-ember font-semibold hover:underline">
+                    Read our safety tips
+                  </a>
+                  .
+                </p>
               </form>
             ) : (
               <div className="card p-5 text-sm">

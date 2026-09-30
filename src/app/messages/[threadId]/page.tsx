@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { sendMessageAction, submitRatingAction } from "@/app/actions";
 import ReportForm from "@/components/ReportForm";
+import TrustedBadge from "@/components/TrustedBadge";
+import { isTrustedHost } from "@/lib/trust";
 
 export default async function ThreadPage({ params }: { params: { threadId: string } }) {
   const user = await getCurrentUser();
@@ -35,13 +37,16 @@ export default async function ThreadPage({ params }: { params: { threadId: strin
       </div>
       <h1 className="font-display italic text-2xl text-ink mb-1">Conversation with {other.name}</h1>
       <div className="flex items-center justify-between mb-6">
-        <p className="text-sm text-slate flex items-center gap-1">
+        <p className="text-sm text-slate flex items-center gap-2">
           {other.ratingCount > 0 ? (
             <>
-              <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 fill-gold">
-                <path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.3L10 15l-5.6 3.1 1.4-6.3L1 7.5l6.4-.6z" />
-              </svg>
-              {other.avgRating.toFixed(1)} ({other.ratingCount} ratings)
+              {isTrustedHost(other) && <TrustedBadge />}
+              <span className="flex items-center gap-1">
+                <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 fill-gold">
+                  <path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.3L10 15l-5.6 3.1 1.4-6.3L1 7.5l6.4-.6z" />
+                </svg>
+                {other.avgRating.toFixed(1)} ({other.ratingCount} ratings)
+              </span>
             </>
           ) : (
             "No ratings yet"

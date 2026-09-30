@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { db } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 import { distanceKm } from "@/lib/geo";
-import CategoryArt from "@/components/CategoryArt";
 import SearchMap from "@/components/SearchMap";
 import ResultsViewToggle from "@/components/ResultsViewToggle";
 import LocationPicker from "@/components/LocationPicker";
+import DateQuickPicks from "@/components/DateQuickPicks";
+import ListingCard from "@/components/ListingCard";
 
 type SearchParams = {
   q?: string;
@@ -65,12 +66,26 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
     where.AND = [...(where.AND || []), { OR: [{ price: null }, { price: { lte: Number(searchParams.priceMax) } }] }];
   }
 
-  let listings = await db.listing.findMany({
-    where,
-    orderBy: [{ boosted: "desc" }, { createdAt: "desc" }],
-    include: { category: { include: { parent: true } }, owner: true, photos: { take: 1 } },
-    take: 60,
-  });
+  const [listings, user] = await Promise.all([
+    db.listing.findMany({
+      where,
+      orderBy: [{ boosted: "desc" }, { createdAt: "desc" }],
+      include: { category: { include: { parent: true } }, owner: true, photos: { take: 1 } },
+      take: 60,
+    }),
+    getCurrentUser(),
+  ]);
+
+  const savedIds = user
+    ? new Set(
+        (
+          await db.savedListing.findMany({
+            where: { userId: user.id, listingId: { in: listings.map((l) => l.id) } },
+            select: { listingId: true },
+          })
+        ).map((s) => s.listingId)
+      )
+    : new Set<string>();
 
   const lat = searchParams.lat ? Number(searchParams.lat) : null;
   const lng = searchParams.lng ? Number(searchParams.lng) : null;
@@ -117,42 +132,15 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-6">
-          {withDistance.map((listing) => {
-            const topSlug = listing.category.parent?.slug ?? listing.category.slug;
-            return (
-              <Link
-                key={listing.id}
-                href={`/listings/${listing.id}`}
-                className="card overflow-hidden block group hover:shadow-card-hover hover:-translate-y-1 transition-all duration-200"
-              >
-                {listing.photos[0] ? (
-                  <img src={listing.photos[0].url} alt="" className="w-full aspect-[4/3] object-cover" />
-                ) : (
-                  <CategoryArt topSlug={topSlug} className="w-full aspect-[4/3]" />
-                )}
-                <div className="p-5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="tag">{listing.category.name}</span>
-                    {listing.listingType === "plan" && <span className="tag tag-warm">Plan</span>}
-                  </div>
-                  <h3 className="font-display text-lg font-medium text-ink group-hover:text-ember transition-colors text-balance">
-                    {listing.title}
-                  </h3>
-                  <p className="text-sm text-slate mt-1">
-                    {listing.location}
-                    {listing.distance != null && ` · ${listing.distance.toFixed(0)} km away`}
-                  </p>
-                  <div className="flex items-center justify-between mt-4 text-sm">
-                    <span className="font-bold tabular-nums">{listing.price ? `€${listing.price}` : "Free"}</span>
-                    <span className="text-slate tabular-nums">
-                      {new Date(listing.dateStart).toLocaleDateString()} –{" "}
-                      {new Date(listing.dateEnd).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+          {withDistance.map((listing) => (
+            <ListingCard
+              key={listing.id}
+              listing={listing}
+              saved={savedIds.has(listing.id)}
+              showSave={!!user}
+              savePath="/search"
+            />
+          ))}
         </div>
       )}
     </div>
@@ -234,14 +222,18 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="eyebrow text-slate">From</label>
-              <input type="date" name="dateFrom" defaultValue={searchParams.dateFrom} className="input mt-1.5" />
+          <div>
+            <label className="eyebrow text-slate">When</label>
+            <div className="mt-1.5 mb-3">
+              <DateQuickPicks />
             </div>
-            <div>
-              <label className="eyebrow text-slate">To</label>
-              <input type="date" name="dateTo" defaultValue={searchParams.dateTo} className="input mt-1.5" />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <input type="date" name="dateFrom" defaultValue={searchParams.dateFrom} className="input" aria-label="From date" />
+              </div>
+              <div>
+                <input type="date" name="dateTo" defaultValue={searchParams.dateTo} className="input" aria-label="To date" />
+              </div>
             </div>
           </div>
           <div>

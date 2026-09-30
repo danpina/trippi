@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Fraunces, Manrope } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
@@ -28,8 +29,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen flex flex-col bg-mist text-ink font-body">
         <Nav />
         <main className="flex-1">{children}</main>
-        <footer className="border-t border-black/5 py-8 text-center text-xs text-slate">
-          TripSwap — arrange payment privately with the other party. v1 prototype.
+        <footer className="border-t border-black/5 py-8 text-center text-xs text-slate space-y-1.5">
+          <p>TripSwap — arrange payment privately with the other party. v1 prototype.</p>
+          <p>
+            <Link href="/safety" className="text-ember font-semibold hover:underline">
+              Safety tips
+            </Link>
+          </p>
         </footer>
       </body>
     </html>

@@ -66,6 +66,7 @@ export async function createListingAction(formData: FormData) {
   const dateEnd = new Date(String(formData.get("dateEnd")));
   const priceRaw = formData.get("price");
   const price = priceRaw ? Number(priceRaw) : null;
+  const priceNegotiable = formData.get("priceNegotiable") === "on";
   const capacity = Number(formData.get("capacity") || 1);
   const categoryId = String(formData.get("categoryId") || "");
   const listingType = String(formData.get("listingType") || "opportunity");
@@ -98,6 +99,7 @@ export async function createListingAction(formData: FormData) {
       dateStart,
       dateEnd,
       price,
+      priceNegotiable,
       capacity,
       genderPreference,
       minAge,
@@ -246,4 +248,24 @@ export async function dismissReportAction(formData: FormData) {
   await db.report.update({ where: { id: reportId }, data: { status: "dismissed" } });
 
   revalidatePath("/admin");
+}
+
+export async function toggleSaveAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("You must be logged in to save a listing.");
+
+  const listingId = String(formData.get("listingId") || "");
+  const path = String(formData.get("path") || "/");
+
+  const existing = await db.savedListing.findUnique({
+    where: { userId_listingId: { userId: user.id, listingId } },
+  });
+
+  if (existing) {
+    await db.savedListing.delete({ where: { id: existing.id } });
+  } else {
+    await db.savedListing.create({ data: { userId: user.id, listingId } });
+  }
+
+  revalidatePath(path);
 }
