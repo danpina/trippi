@@ -3,6 +3,7 @@ import CategoryArt from "./CategoryArt";
 import SaveButton from "./SaveButton";
 import TrustedBadge from "./TrustedBadge";
 import { isTrustedHost } from "@/lib/trust";
+import { tripMeta } from "@/lib/dates";
 
 export type CardListing = {
   id: string;
@@ -71,15 +72,25 @@ export default function ListingCard({
               </span>
             </div>
           )}
-          <div className="flex items-center justify-between mt-4 text-sm">
+          <div className="mt-4 text-sm">
             <span className="font-bold tabular-nums">
               {listing.price ? `€${listing.price}` : "Free"}
               {listing.priceNegotiable && <span className="text-slate font-normal"> · negotiable</span>}
             </span>
             {listing.dateStart && listing.dateEnd && (
-              <span className="text-slate tabular-nums">
-                {new Date(listing.dateStart).toLocaleDateString()} – {new Date(listing.dateEnd).toLocaleDateString()}
-              </span>
+              <div className="flex items-center justify-between mt-1 text-xs text-slate tabular-nums">
+                <span>
+                  {new Date(listing.dateStart).toLocaleDateString()} – {new Date(listing.dateEnd).toLocaleDateString()}
+                </span>
+                {(() => {
+                  const { lengthLabel, aheadLabel } = tripMeta(listing.dateStart, listing.dateEnd);
+                  return (
+                    <span>
+                      {lengthLabel} · {aheadLabel}
+                    </span>
+                  );
+                })()}
+              </div>
             )}
           </div>
         </div>

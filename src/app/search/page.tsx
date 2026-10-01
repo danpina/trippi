@@ -60,7 +60,12 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
       { location: { contains: searchParams.q, mode: "insensitive" } },
     ];
   }
-  if (searchParams.dateFrom) where.dateEnd = { gte: new Date(searchParams.dateFrom) };
+  // Always exclude listings whose dates have already passed, even if the caller doesn't set
+  // a "from" date — an already-expired listing is never a useful search result.
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const dateFromFilter = searchParams.dateFrom ? new Date(searchParams.dateFrom) : null;
+  where.dateEnd = { gte: dateFromFilter && dateFromFilter > todayStart ? dateFromFilter : todayStart };
   if (searchParams.dateTo) where.dateStart = { lte: new Date(searchParams.dateTo) };
   if (searchParams.priceMax) {
     where.AND = [...(where.AND || []), { OR: [{ price: null }, { price: { lte: Number(searchParams.priceMax) } }] }];

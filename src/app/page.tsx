@@ -3,12 +3,16 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import CategoryIcon from "@/components/CategoryIcon";
 import ListingCard from "@/components/ListingCard";
+import HeroSearchInput from "@/components/HeroSearchInput";
 import { styleFor } from "@/lib/categoryStyle";
 
 export default async function HomePage() {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
   const [featured, categories, user] = await Promise.all([
     db.listing.findMany({
-      where: { moderationStatus: "published", status: "active" },
+      where: { moderationStatus: "published", status: "active", dateEnd: { gte: todayStart } },
       orderBy: [{ boosted: "desc" }, { createdAt: "desc" }],
       take: 6,
       include: { category: { include: { parent: true } }, owner: true, photos: { take: 1 } },
@@ -42,9 +46,9 @@ export default async function HomePage() {
           className="blob w-[22rem] h-[22rem] -bottom-32 -left-20 bg-glacier animate-drift-slow"
         />
 
-        <div className="relative max-w-6xl mx-auto px-6 pt-8 pb-8 md:pt-10 md:pb-10">
+        <div className="relative max-w-6xl mx-auto px-6 pt-12 pb-12 md:pt-16 md:pb-16">
           <div className="flex items-baseline justify-between gap-4 flex-wrap animate-fade-up">
-            <h1 className="font-display italic text-xl sm:text-2xl font-medium text-balance">
+            <h1 className="font-display italic text-3xl sm:text-4xl font-medium text-balance">
               Someone&apos;s cancelled trip is your{" "}
               <span className="bg-gradient-to-r from-ember to-gold bg-clip-text text-transparent">
                 open weekend
@@ -59,13 +63,9 @@ export default async function HomePage() {
           <form
             action="/search"
             method="GET"
-            className="mt-4 flex flex-col sm:flex-row gap-2 bg-white/10 backdrop-blur-xl border border-white/15 rounded-2xl sm:rounded-full p-2 max-w-2xl shadow-glow animate-fade-up [animation-delay:80ms]"
+            className="mt-6 flex flex-col sm:flex-row gap-2 bg-white/10 backdrop-blur-xl border border-white/15 rounded-2xl sm:rounded-full p-2 max-w-2xl shadow-glow animate-fade-up [animation-delay:80ms]"
           >
-            <input
-              name="q"
-              placeholder="Where to? e.g. Chamonix"
-              className="flex-1 bg-transparent px-4 py-3 text-white placeholder-white/50 outline-none"
-            />
+            <HeroSearchInput />
             <select
               name="category"
               className="bg-white/10 sm:bg-transparent text-white px-4 py-3 rounded-xl sm:rounded-none outline-none [&>option]:text-ink"

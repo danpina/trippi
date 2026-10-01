@@ -30,6 +30,12 @@ export default async function Nav() {
               >
                 Post a listing
               </Link>
+              <Link
+                href="/listings/mine"
+                className="hidden sm:inline-block px-3 py-2 text-ink/80 hover:text-ink font-semibold"
+              >
+                My listings
+              </Link>
               <Link href="/messages" className="hidden sm:inline-block px-3 py-2 text-ink/80 hover:text-ink font-semibold">
                 Messages
               </Link>
@@ -41,7 +47,10 @@ export default async function Nav() {
                   Admin
                 </Link>
               )}
-              <span className="hidden md:flex items-center gap-1.5 px-3 text-sm text-slate">
+              <Link
+                href="/settings"
+                className="hidden md:flex items-center gap-1.5 px-3 text-sm text-slate hover:text-ink"
+              >
                 {user.name}
                 {isTrustedHost(user) && <TrustedBadge />}
                 {user.ratingCount > 0 && (
@@ -52,7 +61,7 @@ export default async function Nav() {
                     {user.avgRating.toFixed(1)}
                   </span>
                 )}
-              </span>
+              </Link>
               <form action={logoutAction}>
                 <button className="btn-secondary !py-2 !px-4 text-xs">Log out</button>
               </form>

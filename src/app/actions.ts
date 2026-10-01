@@ -53,75 +53,151 @@ export async function logoutAction() {
   redirect("/");
 }
 
+function parseListingFormData(formData: FormData) {
+  return {
+    title: String(formData.get("title") || "").trim(),
+    description: String(formData.get("description") || "").trim(),
+    location: String(formData.get("location") || "").trim(),
+    lat: formData.get("lat") ? Number(formData.get("lat")) : null,
+    lng: formData.get("lng") ? Number(formData.get("lng")) : null,
+    dateStart: new Date(String(formData.get("dateStart"))),
+    dateEnd: new Date(String(formData.get("dateEnd"))),
+    price: formData.get("price") ? Number(formData.get("price")) : null,
+    priceNegotiable: formData.get("priceNegotiable") === "on",
+    capacity: Number(formData.get("capacity") || 1),
+    categoryId: String(formData.get("categoryId") || ""),
+    listingType: String(formData.get("listingType") || "opportunity"),
+    genderPreference: String(formData.get("genderPreference") || "any"),
+    minAge: formData.get("minAge") ? Number(formData.get("minAge")) : null,
+    maxAge: formData.get("maxAge") ? Number(formData.get("maxAge")) : null,
+    photoUrls: String(formData.get("photoUrls") || "")
+      .split("\n")
+      .map((u) => u.trim())
+      .filter(Boolean)
+      .slice(0, 8),
+  };
+}
+
 export async function createListingAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("You must be logged in to post a listing.");
 
-  const title = String(formData.get("title") || "").trim();
-  const description = String(formData.get("description") || "").trim();
-  const location = String(formData.get("location") || "").trim();
-  const lat = formData.get("lat") ? Number(formData.get("lat")) : null;
-  const lng = formData.get("lng") ? Number(formData.get("lng")) : null;
-  const dateStart = new Date(String(formData.get("dateStart")));
-  const dateEnd = new Date(String(formData.get("dateEnd")));
-  const priceRaw = formData.get("price");
-  const price = priceRaw ? Number(priceRaw) : null;
-  const priceNegotiable = formData.get("priceNegotiable") === "on";
-  const capacity = Number(formData.get("capacity") || 1);
-  const categoryId = String(formData.get("categoryId") || "");
-  const listingType = String(formData.get("listingType") || "opportunity");
-  const genderPreference = String(formData.get("genderPreference") || "any");
-  const minAge = formData.get("minAge") ? Number(formData.get("minAge")) : null;
-  const maxAge = formData.get("maxAge") ? Number(formData.get("maxAge")) : null;
+  const f = parseListingFormData(formData);
 
-  const category = await db.category.findUnique({ where: { id: categoryId } });
+  const category = await db.category.findUnique({ where: { id: f.categoryId } });
   if (!category) throw new Error("Invalid category.");
 
   const moderation = runModerationRules({
-    title,
-    description,
-    price,
-    dateStart,
-    dateEnd,
+    title: f.title,
+    description: f.description,
+    price: f.price,
+    dateStart: f.dateStart,
+    dateEnd: f.dateEnd,
     category: category.name,
   });
 
   const listing = await db.listing.create({
     data: {
       ownerId: user.id,
-      listingType,
-      categoryId,
-      title,
-      description,
-      location,
-      lat,
-      lng,
-      dateStart,
-      dateEnd,
-      price,
-      priceNegotiable,
-      capacity,
-      genderPreference,
-      minAge,
-      maxAge,
+      listingType: f.listingType,
+      categoryId: f.categoryId,
+      title: f.title,
+      description: f.description,
+      location: f.location,
+      lat: f.lat,
+      lng: f.lng,
+      dateStart: f.dateStart,
+      dateEnd: f.dateEnd,
+      price: f.price,
+      priceNegotiable: f.priceNegotiable,
+      capacity: f.capacity,
+      genderPreference: f.genderPreference,
+      minAge: f.minAge,
+      maxAge: f.maxAge,
       moderationStatus: moderation.status,
       moderationNotes: moderation.notes.join(" | ") || null,
     },
   });
 
-  const photoUrls = String(formData.get("photoUrls") || "")
-    .split("\n")
-    .map((u) => u.trim())
-    .filter(Boolean)
-    .slice(0, 8);
-
-  if (photoUrls.length) {
+  if (f.photoUrls.length) {
     await db.listingPhoto.createMany({
-      data: photoUrls.map((url, i) => ({ listingId: listing.id, url, sortOrder: i })),
+      data: f.photoUrls.map((url, i) => ({ listingId: listing.id, url, sortOrder: i })),
     });
   }
 
   redirect(`/listings/${listing.id}`);
+}
+
+export async function updateListingAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("You must be logged in.");
+
+  const listingId = String(formData.get("listingId") || "");
+  const existing = await db.listing.findUniqueOrThrow({ where: { id: listingId } });
+  if (existing.ownerId !== user.id && !user.isAdmin) throw new Error("Not your listing.");
+
+  const f = parseListingFormData(formData);
+
+  const category = await db.category.findUnique({ where: { id: f.categoryId } });
+  if (!category) throw new Error("Invalid category.");
+
+  // Content changed, so it's re-checked exactly like a new listing — a fix can clear a flag,
+  // and an edit can just as easily introduce one.
+  const moderation = runModerationRules({
+    title: f.title,
+    description: f.description,
+    price: f.price,
+    dateStart: f.dateStart,
+    dateEnd: f.dateEnd,
+    category: category.name,
+  });
+
+  await db.listing.update({
+    where: { id: listingId },
+    data: {
+      listingType: f.listingType,
+      categoryId: f.categoryId,
+      title: f.title,
+      description: f.description,
+      location: f.location,
+      lat: f.lat,
+      lng: f.lng,
+      dateStart: f.dateStart,
+      dateEnd: f.dateEnd,
+      price: f.price,
+      priceNegotiable: f.priceNegotiable,
+      capacity: f.capacity,
+      genderPreference: f.genderPreference,
+      minAge: f.minAge,
+      maxAge: f.maxAge,
+      moderationStatus: moderation.status,
+      moderationNotes: moderation.notes.join(" | ") || null,
+    },
+  });
+
+  await db.listingPhoto.deleteMany({ where: { listingId } });
+  if (f.photoUrls.length) {
+    await db.listingPhoto.createMany({
+      data: f.photoUrls.map((url, i) => ({ listingId, url, sortOrder: i })),
+    });
+  }
+
+  redirect(`/listings/${listingId}`);
+}
+
+export async function setListingStatusAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("You must be logged in.");
+
+  const listingId = String(formData.get("listingId") || "");
+  const status = String(formData.get("status") || "");
+  if (status !== "active" && status !== "closed") throw new Error("Invalid status.");
+
+  const existing = await db.listing.findUniqueOrThrow({ where: { id: listingId } });
+  if (existing.ownerId !== user.id && !user.isAdmin) throw new Error("Not your listing.");
+
+  await db.listing.update({ where: { id: listingId }, data: { status } });
+  revalidatePath("/listings/mine");
 }
 
 export async function contactOwnerAction(formData: FormData) {
@@ -268,4 +344,50 @@ export async function toggleSaveAction(formData: FormData) {
   }
 
   revalidatePath(path);
+}
+
+export type SettingsState = { error?: string; success?: string } | undefined;
+
+export async function updateProfileAction(prevState: SettingsState, formData: FormData): Promise<SettingsState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "You must be logged in." };
+
+  const name = String(formData.get("name") || "").trim();
+  if (!name) return { error: "Name can't be empty." };
+
+  const ageRaw = formData.get("age");
+  const age = ageRaw ? Number(ageRaw) : null;
+  if (age != null && (age < 13 || age > 120)) return { error: "Enter a realistic age." };
+
+  const gender = String(formData.get("gender") || "");
+
+  await db.user.update({
+    where: { id: user.id },
+    data: { name, age, gender: gender || null },
+  });
+
+  revalidatePath("/settings");
+  return { success: "Profile updated." };
+}
+
+export async function changePasswordAction(prevState: SettingsState, formData: FormData): Promise<SettingsState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "You must be logged in." };
+
+  const currentPassword = String(formData.get("currentPassword") || "");
+  const newPassword = String(formData.get("newPassword") || "");
+  const confirmPassword = String(formData.get("confirmPassword") || "");
+
+  if (!(await verifyPassword(currentPassword, user.passwordHash))) {
+    return { error: "Current password is incorrect." };
+  }
+  if (newPassword.length < 6) return { error: "New password must be at least 6 characters." };
+  if (newPassword !== confirmPassword) return { error: "New passwords don't match." };
+
+  await db.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await hashPassword(newPassword) },
+  });
+
+  return { success: "Password changed." };
 }

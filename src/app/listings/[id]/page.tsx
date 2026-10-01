@@ -7,6 +7,7 @@ import ReportForm from "@/components/ReportForm";
 import SaveButton from "@/components/SaveButton";
 import TrustedBadge from "@/components/TrustedBadge";
 import { isTrustedHost } from "@/lib/trust";
+import { tripMeta } from "@/lib/dates";
 
 export default async function ListingDetailPage({ params }: { params: { id: string } }) {
   const listing = await db.listing.findUnique({
@@ -80,6 +81,10 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
             <div className="eyebrow text-slate">Dates</div>
             <div className="mt-1 font-bold font-display text-lg">
               {new Date(listing.dateStart).toLocaleDateString()} – {new Date(listing.dateEnd).toLocaleDateString()}
+            </div>
+            <div className="text-xs font-body font-semibold text-slate mt-0.5">
+              {tripMeta(listing.dateStart, listing.dateEnd).lengthLabel} ·{" "}
+              {tripMeta(listing.dateStart, listing.dateEnd).aheadLabel}
             </div>
           </div>
           <div className="card p-4">

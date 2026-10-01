@@ -19,11 +19,11 @@ export default function SaveButton({
         type="submit"
         aria-label={saved ? "Remove from saved" : "Save this listing"}
         title={saved ? "Remove from saved" : "Save this listing"}
-        className="w-8 h-8 rounded-full bg-ink/45 backdrop-blur-sm flex items-center justify-center hover:bg-ink/65 transition-colors"
+        className="w-11 h-11 rounded-full bg-ink/45 backdrop-blur-sm flex items-center justify-center hover:bg-ink/65 transition-colors"
       >
         <svg
           viewBox="0 0 24 24"
-          className={saved ? "w-4 h-4 fill-ember stroke-ember" : "w-4 h-4 fill-none stroke-white"}
+          className={saved ? "w-6 h-6 fill-ember stroke-ember" : "w-6 h-6 fill-none stroke-white"}
           strokeWidth="2"
         >
           <path
