@@ -1,14 +1,16 @@
 import CategoryIcon from "./CategoryIcon";
-import { styleFor } from "@/lib/categoryStyle";
+import { styleFor, styleForSeeded } from "@/lib/categoryStyle";
 
 export default function CategoryArt({
   topSlug,
+  seed,
   className = "",
 }: {
   topSlug: string | undefined | null;
+  seed?: string;
   className?: string;
 }) {
-  const s = styleFor(topSlug);
+  const s = seed ? styleForSeeded(topSlug, seed) : styleFor(topSlug);
   return (
     <div
       className={`relative flex items-center justify-center overflow-hidden ${className}`}

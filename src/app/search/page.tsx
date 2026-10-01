@@ -6,6 +6,7 @@ import ResultsViewToggle from "@/components/ResultsViewToggle";
 import LocationPicker from "@/components/LocationPicker";
 import DateQuickPicks from "@/components/DateQuickPicks";
 import ListingCard from "@/components/ListingCard";
+import SortSelect from "@/components/SortSelect";
 
 type SearchParams = {
   q?: string;
@@ -17,7 +18,28 @@ type SearchParams = {
   lng?: string;
   radius?: string;
   locationLabel?: string;
+  sort?: string;
 };
+
+// Null-safe comparator per sort key — distance/rating can be missing (no point picked yet,
+// host has no ratings), and those should sink to the end regardless of direction rather than
+// winning ties by accident.
+function compareBy(key: string, a: { price: number | null; distance: number | null; owner: { avgRating: number; ratingCount: number }; dateStart: Date }, b: typeof a) {
+  if (key === "price") return (a.price ?? 0) - (b.price ?? 0);
+  if (key === "distance") {
+    if (a.distance == null && b.distance == null) return 0;
+    if (a.distance == null) return 1;
+    if (b.distance == null) return -1;
+    return a.distance - b.distance;
+  }
+  if (key === "rating") {
+    const av = a.owner.ratingCount > 0 ? a.owner.avgRating : -1;
+    const bv = b.owner.ratingCount > 0 ? b.owner.avgRating : -1;
+    return av - bv;
+  }
+  if (key === "date") return a.dateStart.getTime() - b.dateStart.getTime();
+  return 0;
+}
 
 function toArray(v: string | string[] | undefined): string[] {
   if (!v) return [];
@@ -104,7 +126,12 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
   if (lat != null && lng != null && radius) {
     withDistance = withDistance.filter((l) => l.distance == null || l.distance <= radius);
   }
-  if (lat != null && lng != null) {
+
+  if (searchParams.sort) {
+    const [key, dir] = searchParams.sort.split("-");
+    const mult = dir === "desc" ? -1 : 1;
+    withDistance.sort((a, b) => mult * compareBy(key, a, b));
+  } else if (lat != null && lng != null) {
     withDistance.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
   }
 
@@ -250,11 +277,12 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
       </aside>
 
       <div>
-        <div className="mb-5 flex items-center justify-between">
+        <div className="mb-5 flex items-center justify-between gap-3">
           <p className="text-sm text-slate">
             <span className="font-bold text-ink tabular-nums">{withDistance.length}</span> result
             {withDistance.length === 1 ? "" : "s"}
           </p>
+          <SortSelect defaultValue={searchParams.sort} />
         </div>
 
         <ResultsViewToggle list={listPanel} map={mapPanel} />

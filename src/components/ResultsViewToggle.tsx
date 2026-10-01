@@ -22,12 +22,12 @@ export default function ResultsViewToggle({ list, map }: { list: React.ReactNode
         </button>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_440px] gap-6 items-start">
+      <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
         <div className={view === "map" ? "hidden md:block" : "block"}>{list}</div>
         <div
           className={
             (view === "list" ? "hidden md:block" : "block") +
-            " h-[70vh] md:h-[calc(100vh-9rem)] md:sticky md:top-20 rounded-2xl overflow-hidden border border-line shadow-card"
+            " h-[50vh] md:h-[420px] md:sticky md:top-20 rounded-2xl overflow-hidden border border-line shadow-card"
           }
         >
           {map}

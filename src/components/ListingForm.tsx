@@ -1,3 +1,5 @@
+import LocationPicker from "./LocationPicker";
+
 type CategoryOption = {
   id: string;
   name: string;
@@ -10,6 +12,7 @@ export type ListingFormDefaults = {
   title: string;
   description: string;
   location: string;
+  addressDetails: string;
   lat: number | null;
   lng: number | null;
   dateStart: string;
@@ -29,6 +32,7 @@ const emptyDefaults: ListingFormDefaults = {
   title: "",
   description: "",
   location: "",
+  addressDetails: "",
   lat: null,
   lng: null,
   dateStart: "",
@@ -113,26 +117,27 @@ export default function ListingForm({
 
       <div>
         <label className="eyebrow text-slate">Location</label>
-        <input name="location" required defaultValue={d.location} placeholder="Chamonix, France" className="input mt-1.5" />
+        <div className="mt-1.5">
+          <LocationPicker
+            labelFieldName="location"
+            defaultLabel={d.location}
+            defaultLat={d.lat != null ? String(d.lat) : undefined}
+            defaultLng={d.lng != null ? String(d.lng) : undefined}
+            placeholder="Chamonix, France"
+          />
+        </div>
+        <p className="text-xs text-slate mt-1.5">Pick a suggestion so this shows up on the map — or just type a place name.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div>
+        <label className="eyebrow text-slate">Address details (optional)</label>
         <input
-          type="number"
-          step="any"
-          name="lat"
-          defaultValue={d.lat ?? ""}
-          placeholder="Latitude (optional)"
-          className="input"
+          name="addressDetails"
+          defaultValue={d.addressDetails}
+          placeholder="Street, building, meeting point…"
+          className="input mt-1.5"
         />
-        <input
-          type="number"
-          step="any"
-          name="lng"
-          defaultValue={d.lng ?? ""}
-          placeholder="Longitude (optional)"
-          className="input"
-        />
+        <p className="text-xs text-slate mt-1.5">Only shown on the listing — not used for search or the map.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">

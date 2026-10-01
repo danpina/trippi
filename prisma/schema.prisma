@@ -50,11 +50,12 @@ model Listing {
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
 
-  title       String
-  description String
-  location    String
-  lat         Float?
-  lng         Float?
+  title          String
+  description    String
+  location       String
+  addressDetails String?
+  lat            Float?
+  lng            Float?
 
   dateStart DateTime
   dateEnd   DateTime

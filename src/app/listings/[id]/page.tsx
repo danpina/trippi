@@ -54,7 +54,7 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
             </div>
           </div>
         ) : (
-          <CategoryArt topSlug={topSlug} className="w-full h-72" />
+          <CategoryArt topSlug={topSlug} seed={listing.id} className="w-full h-72" />
         )}
       </div>
 
@@ -74,7 +74,10 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
         </div>
 
         <h1 className="font-display text-4xl font-medium text-ink text-balance">{listing.title}</h1>
-        <p className="text-slate mt-2">{listing.location}</p>
+        <p className="text-slate mt-2">
+          {listing.location}
+          {listing.addressDetails && ` · ${listing.addressDetails}`}
+        </p>
 
         <div className="grid sm:grid-cols-3 gap-4 mt-8">
           <div className="card p-4">

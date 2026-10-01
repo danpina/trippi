@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 
 type Suggestion = { label: string; lat: number; lng: number };
 
+// Soft bias toward Europe (left,top,right,bottom) — results outside this box can still show.
+const EUROPE_VIEWBOX = "-25,72,45,34";
+
 // Lives in the dark hero, so it keeps its own styling rather than reusing LocationPicker
 // (built for the light sidebar). Selecting a suggestion jumps straight to geocoded results;
 // typing and hitting the Search button without picking one still does a plain keyword
@@ -24,7 +27,7 @@ export default function HeroSearchInput() {
       skipNextFetch.current = false;
       return;
     }
-    if (query.trim().length < 3) {
+    if (query.trim().length < 2) {
       setSuggestions([]);
       return;
     }
@@ -35,7 +38,7 @@ export default function HeroSearchInput() {
       abortRef.current = controller;
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(query)}`,
+          `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(query)}&viewbox=${EUROPE_VIEWBOX}`,
           { signal: controller.signal, headers: { Accept: "application/json" } }
         );
         const data = await res.json();
@@ -44,7 +47,7 @@ export default function HeroSearchInput() {
       } catch {
         // aborted or offline — leave suggestions as-is, plain keyword search still works
       }
-    }, 400);
+    }, 200);
   }, [query]);
 
   function selectSuggestion(s: Suggestion) {

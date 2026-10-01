@@ -46,7 +46,7 @@ export default function ListingCard({
         {listing.photos[0] ? (
           <img src={listing.photos[0].url} alt="" className="w-full aspect-[4/3] object-cover" />
         ) : (
-          <CategoryArt topSlug={topSlug} className="w-full aspect-[4/3]" />
+          <CategoryArt topSlug={topSlug} seed={listing.id} className="w-full aspect-[4/3]" />
         )}
         <div className="p-5">
           <div className="flex items-center gap-2 mb-2">

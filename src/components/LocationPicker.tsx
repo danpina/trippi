@@ -8,14 +8,22 @@ type Suggestion = { label: string; lat: number; lng: number };
 // user-triggered lookups are exactly what its usage policy expects. Swap for Mapbox/Google/
 // LocationIQ geocoding before real production traffic; those need an API key from whoever
 // owns the account.
+// Soft bias toward Europe (left,top,right,bottom) — results outside this box can still show,
+// they're just not favored, so a search for "Bali" still works.
+const EUROPE_VIEWBOX = "-25,72,45,34";
+
 export default function LocationPicker({
   defaultLabel,
   defaultLat,
   defaultLng,
+  labelFieldName = "locationLabel",
+  placeholder = "City or address, e.g. Chamonix, France",
 }: {
   defaultLabel?: string;
   defaultLat?: string;
   defaultLng?: string;
+  labelFieldName?: string;
+  placeholder?: string;
 }) {
   const [query, setQuery] = useState(defaultLabel || "");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -30,7 +38,7 @@ export default function LocationPicker({
 
   useEffect(() => {
     if (picked && query === picked.label) return; // just selected, don't re-search
-    if (query.trim().length < 3) {
+    if (query.trim().length < 2) {
       setSuggestions([]);
       return;
     }
@@ -41,7 +49,7 @@ export default function LocationPicker({
       abortRef.current = controller;
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(query)}`,
+          `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(query)}&viewbox=${EUROPE_VIEWBOX}`,
           { signal: controller.signal, headers: { Accept: "application/json" } }
         );
         const data = await res.json();
@@ -52,7 +60,7 @@ export default function LocationPicker({
       } catch {
         // aborted or offline — leave suggestions as-is
       }
-    }, 400);
+    }, 200);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
@@ -73,7 +81,7 @@ export default function LocationPicker({
     <div className="relative">
       <input type="hidden" name="lat" value={picked ? picked.lat : ""} />
       <input type="hidden" name="lng" value={picked ? picked.lng : ""} />
-      <input type="hidden" name="locationLabel" value={picked ? picked.label : ""} />
+      <input type="hidden" name={labelFieldName} value={query} />
 
       <div className="relative">
         <input
@@ -83,7 +91,7 @@ export default function LocationPicker({
             if (picked) setPicked(null);
           }}
           onFocus={() => suggestions.length > 0 && setOpen(true)}
-          placeholder="City or address, e.g. Chamonix, France"
+          placeholder={placeholder}
           className="input pr-8"
           autoComplete="off"
         />
