@@ -163,7 +163,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
           <p className="text-slate text-sm">No listings match those filters yet. Try widening the date range or radius.</p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {withDistance.map((listing) => (
             <ListingCard
               key={listing.id}
@@ -189,7 +189,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10 grid md:grid-cols-[300px_1fr] gap-10">
+    <div className="max-w-7xl mx-auto px-6 py-10 grid md:grid-cols-[260px_1fr] gap-8">
       <aside className="space-y-5">
         <h2 className="font-display italic text-xl text-ink">Filters</h2>
         <form method="GET" className="space-y-5 card p-5">

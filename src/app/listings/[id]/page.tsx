@@ -174,6 +174,13 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
                   </a>
                   .
                 </p>
+                <p className="text-xs text-slate mt-1.5">
+                  TripSwap only connects you two — we take no responsibility for what's arranged here. See our{" "}
+                  <a href="/terms" className="text-ember font-semibold hover:underline">
+                    terms &amp; disclaimer
+                  </a>
+                  .
+                </p>
               </form>
             ) : (
               <div className="card p-5 text-sm">

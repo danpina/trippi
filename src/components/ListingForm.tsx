@@ -1,4 +1,5 @@
 import LocationPicker from "./LocationPicker";
+import PhotoManager from "./PhotoManager";
 
 type CategoryOption = {
   id: string;
@@ -52,12 +53,14 @@ export default function ListingForm({
   defaults,
   submitLabel,
   listingId,
+  existingPhotos,
 }: {
   action: (formData: FormData) => void;
   categories: CategoryOption[];
   defaults?: Partial<ListingFormDefaults>;
   submitLabel: string;
   listingId?: string;
+  existingPhotos?: { id: string; url: string }[];
 }) {
   const d = { ...emptyDefaults, ...defaults };
 
@@ -181,9 +184,38 @@ export default function ListingForm({
       </fieldset>
 
       <div>
-        <label className="eyebrow text-slate">Photo URLs (one per line, optional)</label>
-        <textarea name="photoUrls" rows={2} defaultValue={d.photoUrls} className="input mt-1.5" placeholder="https://…" />
+        <label className="eyebrow text-slate">Photos (optional)</label>
+        <div className="mt-1.5">
+          <PhotoManager existingPhotos={existingPhotos} />
+        </div>
+        <details className="mt-3">
+          <summary className="text-xs text-slate cursor-pointer hover:text-ink">
+            Advanced: paste image URLs instead
+          </summary>
+          <textarea
+            name="photoUrls"
+            rows={2}
+            defaultValue={d.photoUrls}
+            className="input mt-1.5"
+            placeholder="https://…"
+          />
+          <p className="text-xs text-slate mt-1.5">
+            Most links to photos hosted elsewhere (Google Photos, Instagram, etc.) won't actually load here — they
+            block hotlinking. A direct image URL (ending in .jpg/.png, from somewhere like Imgur) works fine.
+          </p>
+        </details>
       </div>
+
+      <label className="flex items-start gap-2 text-sm text-ink/85">
+        <input type="checkbox" required className="accent-ember mt-0.5" />
+        <span>
+          I agree to the{" "}
+          <a href="/terms" target="_blank" className="text-ember font-semibold hover:underline">
+            Terms &amp; disclaimer
+          </a>{" "}
+          — TripSwap only connects people and takes no responsibility for what's arranged between them.
+        </span>
+      </label>
 
       <button className="btn-primary w-full">{submitLabel}</button>
     </form>

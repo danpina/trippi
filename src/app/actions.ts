@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { createSessionCookie, clearSessionCookie, getCurrentUser, hashPassword, verifyPassword } from "@/lib/auth";
 import { runModerationRules } from "@/lib/moderation";
 import { recomputeUserRating } from "@/lib/ratings";
+import { uploadListingPhoto } from "@/lib/storage";
 
 // Expected, user-facing failures (bad password, duplicate email) are returned as form state
 // rather than thrown — Next.js redacts thrown Server Action errors in production down to a
@@ -76,7 +77,39 @@ function parseListingFormData(formData: FormData) {
       .map((u) => u.trim())
       .filter(Boolean)
       .slice(0, 8),
+    photoFiles: formData.getAll("photoFiles").filter((f): f is File => f instanceof File && f.size > 0),
+    removePhotoIds: formData.getAll("removePhotoIds").map(String),
+    coverKey: String(formData.get("coverKey") || ""),
   };
+}
+
+// New uploads are created one by one (not createMany) so each row's id is known, which lets
+// a "new-N" coverKey (N = index among this submission's uploaded files) resolve to a real
+// ListingPhoto id afterward.
+async function uploadAndCreatePhotos(listingId: string, files: File[], startSortOrder: number) {
+  const idByIndex = new Map<number, string>();
+  for (let i = 0; i < files.length; i++) {
+    const url = await uploadListingPhoto(files[i], listingId);
+    const photo = await db.listingPhoto.create({ data: { listingId, url, sortOrder: startSortOrder + i } });
+    idByIndex.set(i, photo.id);
+  }
+  return idByIndex;
+}
+
+// Moves whichever photo the submitter picked as cover to sortOrder 0, shifting the rest after
+// it in their existing relative order — the only reordering this form exposes.
+async function applyCoverOrder(listingId: string, coverKey: string, newFileIdByIndex: Map<number, string>) {
+  if (!coverKey) return;
+  const coverPhotoId = coverKey.startsWith("new-")
+    ? newFileIdByIndex.get(Number(coverKey.slice(4))) || null
+    : coverKey;
+  if (!coverPhotoId) return;
+
+  const photos = await db.listingPhoto.findMany({ where: { listingId }, orderBy: { sortOrder: "asc" } });
+  const cover = photos.find((p) => p.id === coverPhotoId);
+  if (!cover) return;
+  const ordered = [cover, ...photos.filter((p) => p.id !== coverPhotoId)];
+  await Promise.all(ordered.map((p, i) => db.listingPhoto.update({ where: { id: p.id }, data: { sortOrder: i } })));
 }
 
 export async function createListingAction(formData: FormData) {
@@ -121,11 +154,15 @@ export async function createListingAction(formData: FormData) {
     },
   });
 
+  let nextSortOrder = 0;
   if (f.photoUrls.length) {
     await db.listingPhoto.createMany({
       data: f.photoUrls.map((url, i) => ({ listingId: listing.id, url, sortOrder: i })),
     });
+    nextSortOrder = f.photoUrls.length;
   }
+  const newFileIdByIndex = await uploadAndCreatePhotos(listing.id, f.photoFiles, nextSortOrder);
+  await applyCoverOrder(listing.id, f.coverKey, newFileIdByIndex);
 
   redirect(`/listings/${listing.id}`);
 }
@@ -178,12 +215,20 @@ export async function updateListingAction(formData: FormData) {
     },
   });
 
-  await db.listingPhoto.deleteMany({ where: { listingId } });
+  if (f.removePhotoIds.length) {
+    await db.listingPhoto.deleteMany({ where: { id: { in: f.removePhotoIds }, listingId } });
+  }
+
+  const maxOrder = await db.listingPhoto.aggregate({ where: { listingId }, _max: { sortOrder: true } });
+  let nextSortOrder = (maxOrder._max.sortOrder ?? -1) + 1;
   if (f.photoUrls.length) {
     await db.listingPhoto.createMany({
-      data: f.photoUrls.map((url, i) => ({ listingId, url, sortOrder: i })),
+      data: f.photoUrls.map((url, i) => ({ listingId, url, sortOrder: nextSortOrder + i })),
     });
+    nextSortOrder += f.photoUrls.length;
   }
+  const newFileIdByIndex = await uploadAndCreatePhotos(listingId, f.photoFiles, nextSortOrder);
+  await applyCoverOrder(listingId, f.coverKey, newFileIdByIndex);
 
   redirect(`/listings/${listingId}`);
 }

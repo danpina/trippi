@@ -56,8 +56,9 @@ export default async function EditListingPage({ params }: { params: { id: string
           minAge: listing.minAge,
           maxAge: listing.maxAge,
           genderPreference: listing.genderPreference,
-          photoUrls: listing.photos.map((p) => p.url).join("\n"),
+          photoUrls: "",
         }}
+        existingPhotos={listing.photos.map((p) => ({ id: p.id, url: p.url }))}
       />
     </div>
   );
