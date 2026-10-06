@@ -67,7 +67,7 @@ export default async function HomePage(props: { searchParams: Promise<{ deleted?
               .
             </h1>
             <p className="text-white/60 text-xs uppercase tracking-wide font-semibold">
-              Spare stays, tickets & experiences from real people
+              Spare stays, tickets & experiences — find one or pass yours on
             </p>
           </div>
 
