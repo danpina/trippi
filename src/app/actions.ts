@@ -32,7 +32,7 @@ export async function registerAction(prevState: AuthState, formData: FormData): 
     },
   });
 
-  createSessionCookie(user.id);
+  await createSessionCookie(user.id);
   redirect("/");
 }
 
@@ -45,12 +45,12 @@ export async function loginAction(prevState: AuthState, formData: FormData): Pro
     return { error: "Invalid email or password." };
   }
 
-  createSessionCookie(user.id);
+  await createSessionCookie(user.id);
   redirect("/");
 }
 
 export async function logoutAction() {
-  clearSessionCookie();
+  await clearSessionCookie();
   redirect("/");
 }
 

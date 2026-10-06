@@ -14,9 +14,9 @@ export async function verifyPassword(password: string, hash: string) {
   return bcrypt.compare(password, hash);
 }
 
-export function createSessionCookie(userId: string) {
+export async function createSessionCookie(userId: string) {
   const token = jwt.sign({ sub: userId }, SECRET, { expiresIn: "30d" });
-  cookies().set(SESSION_COOKIE, token, {
+  (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -25,12 +25,12 @@ export function createSessionCookie(userId: string) {
   });
 }
 
-export function clearSessionCookie() {
-  cookies().delete(SESSION_COOKIE);
+export async function clearSessionCookie() {
+  (await cookies()).delete(SESSION_COOKIE);
 }
 
 export async function getCurrentUser() {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   try {
     const payload = jwt.verify(token, SECRET) as { sub: string };

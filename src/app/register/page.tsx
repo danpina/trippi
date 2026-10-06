@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { registerAction } from "@/app/actions";
 
 export default function RegisterPage() {
-  const [state, formAction] = useFormState(registerAction, undefined);
+  const [state, formAction] = useActionState(registerAction, undefined);
 
   return (
     <div className="max-w-sm mx-auto px-6 py-20">

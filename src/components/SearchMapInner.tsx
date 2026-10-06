@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { styleFor } from "@/lib/categoryStyle";
 
+maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
+
 export type MapListing = {
   id: string;
   title: string;

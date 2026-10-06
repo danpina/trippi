@@ -1,13 +1,13 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { updateProfileAction, changePasswordAction } from "@/app/actions";
 
 type CurrentUser = { name: string; email: string; age: number | null; gender: string | null };
 
 export default function SettingsForm({ user }: { user: CurrentUser }) {
-  const [profileState, profileAction] = useFormState(updateProfileAction, undefined);
-  const [passwordState, passwordAction] = useFormState(changePasswordAction, undefined);
+  const [profileState, profileAction] = useActionState(updateProfileAction, undefined);
+  const [passwordState, passwordAction] = useActionState(changePasswordAction, undefined);
 
   return (
     <div className="max-w-xl mx-auto px-6 py-14 space-y-10">

@@ -61,7 +61,8 @@ async function resolveCategoryIds(slugs: string[]) {
 
 const RADIUS_OPTIONS = [10, 25, 50, 100, 250];
 
-export default async function SearchPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function SearchPage(props: { searchParams: Promise<SearchParams> }) {
+  const searchParams = await props.searchParams;
   const selectedSlugs = toArray(searchParams.category);
   const categoryIds = await resolveCategoryIds(selectedSlugs);
   const categories = await db.category.findMany({

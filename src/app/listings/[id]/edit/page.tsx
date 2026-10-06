@@ -8,7 +8,8 @@ function toDateInput(d: Date) {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-export default async function EditListingPage({ params }: { params: { id: string } }) {
+export default async function EditListingPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=/listings/${params.id}/edit`);
 

@@ -7,3 +7,4 @@ dev.db-journal
 *.log
 .claude/settings.local.json
 tsconfig.tsbuildinfo
+public/maplibre/

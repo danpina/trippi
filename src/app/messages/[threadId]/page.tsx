@@ -6,7 +6,8 @@ import ReportForm from "@/components/ReportForm";
 import TrustedBadge from "@/components/TrustedBadge";
 import { isTrustedHost } from "@/lib/trust";
 
-export default async function ThreadPage({ params }: { params: { threadId: string } }) {
+export default async function ThreadPage(props: { params: Promise<{ threadId: string }> }) {
+  const params = await props.params;
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=/messages/${params.threadId}`);
 

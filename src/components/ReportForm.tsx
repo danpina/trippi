@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { submitReportAction } from "@/app/actions";
 
 const REASONS = ["Spam or scam", "Inappropriate content", "Harassment or abuse", "Fake listing", "Other"];
@@ -16,7 +16,7 @@ export default function ReportForm({
   label: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useFormState(submitReportAction, undefined);
+  const [state, formAction] = useActionState(submitReportAction, undefined);
 
   if (state?.success) {
     return <p className="text-xs text-slate mt-2">Thanks — this has been reported for review.</p>;
