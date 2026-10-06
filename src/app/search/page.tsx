@@ -93,15 +93,16 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
     where.AND = [...(where.AND || []), { OR: [{ price: null }, { price: { lte: Number(searchParams.priceMax) } }] }];
   }
 
-  const [listings, user] = await Promise.all([
-    db.listing.findMany({
-      where,
-      orderBy: [{ boosted: "desc" }, { createdAt: "desc" }],
-      include: { category: { include: { parent: true } }, owner: true, photos: { take: 1 } },
-      take: 60,
-    }),
-    getCurrentUser(),
-  ]);
+  const user = await getCurrentUser();
+  // Your own listings are never a useful search result — they live under "My listings".
+  if (user) where.ownerId = { not: user.id };
+
+  const listings = await db.listing.findMany({
+    where,
+    orderBy: [{ boosted: "desc" }, { createdAt: "desc" }],
+    include: { category: { include: { parent: true } }, owner: true, photos: { take: 1 } },
+    take: 60,
+  });
 
   const savedIds = user
     ? new Set(

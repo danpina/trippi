@@ -10,15 +10,20 @@ export default async function HomePage() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const [featured, categories, user] = await Promise.all([
+  const user = await getCurrentUser();
+  const [featured, categories] = await Promise.all([
     db.listing.findMany({
-      where: { moderationStatus: "published", status: "active", dateEnd: { gte: todayStart } },
+      where: {
+        moderationStatus: "published",
+        status: "active",
+        dateEnd: { gte: todayStart },
+        ...(user ? { ownerId: { not: user.id } } : {}),
+      },
       orderBy: [{ boosted: "desc" }, { createdAt: "desc" }],
       take: 6,
       include: { category: { include: { parent: true } }, owner: true, photos: { take: 1 } },
     }),
     db.category.findMany({ where: { parentId: null }, orderBy: { name: "asc" } }),
-    getCurrentUser(),
   ]);
 
   const savedIds = user
