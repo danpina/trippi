@@ -27,7 +27,7 @@ export default function ReportForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-xs text-slate hover:text-ember-deep underline underline-offset-2"
+        className="text-xs text-slate hover:text-ember-deep underline underline-offset-2 py-2"
       >
         {label}
       </button>

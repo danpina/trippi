@@ -68,7 +68,7 @@ export default function DateQuickPicks() {
           key={p.label}
           type="button"
           onClick={p.onClick}
-          className="px-2.5 py-1 text-xs font-semibold rounded-full border border-line text-ink/80 hover:border-ember hover:text-ember transition-colors"
+          className="px-3 py-2 text-xs font-semibold rounded-full border border-line text-ink/80 hover:border-ember hover:text-ember transition-colors"
         >
           {p.label}
         </button>

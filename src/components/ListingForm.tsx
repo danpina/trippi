@@ -86,7 +86,7 @@ export default function ListingForm({
         const data = new FormData(e.currentTarget);
         startTransition(() => formAction(data));
       }}
-      className="card p-7 space-y-5"
+      className="card p-5 sm:p-7 space-y-5"
     >
       {listingId && <input type="hidden" name="listingId" value={listingId} />}
 
@@ -171,7 +171,7 @@ export default function ListingForm({
         <p className="text-xs text-slate mt-1.5">Only shown on the listing — not used for search or the map.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
         <div>
           <label className="eyebrow text-slate">Start date</label>
           <input type="date" name="dateStart" required defaultValue={d.dateStart} className="input mt-1.5" />
@@ -184,8 +184,17 @@ export default function ListingForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="eyebrow text-slate">Price (€, blank = free)</label>
-          <input type="number" step="any" min={0} max={50000} name="price" defaultValue={d.price ?? ""} className="input mt-1.5" />
+          <label className="eyebrow text-slate">Price (€)</label>
+          <input
+            type="number"
+            step="any"
+            min={0}
+            max={50000}
+            name="price"
+            defaultValue={d.price ?? ""}
+            placeholder="Blank = free"
+            className="input mt-1.5"
+          />
         </div>
         <div>
           <label className="eyebrow text-slate">Capacity</label>
@@ -194,16 +203,17 @@ export default function ListingForm({
       </div>
 
       <label className="flex items-center gap-2 text-sm text-ink/85 -mt-2">
-        <input type="checkbox" name="priceNegotiable" defaultChecked={d.priceNegotiable} className="accent-ember" />
+        <input type="checkbox" name="priceNegotiable" defaultChecked={d.priceNegotiable} className="accent-ember h-4 w-4" />
         Price is negotiable
       </label>
 
       <fieldset className="border border-line rounded-xl p-4">
-        <legend className="eyebrow text-slate px-1">Filtering preferences (optional, never a requirement to contact)</legend>
-        <div className="grid grid-cols-3 gap-3 mt-1">
+        <legend className="eyebrow text-slate px-1">Filtering preferences (optional)</legend>
+        <p className="text-xs text-slate mb-2">Never a requirement to contact you.</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-1">
           <input type="number" name="minAge" min={13} max={120} defaultValue={d.minAge ?? ""} placeholder="Min age" className="input" aria-label="Minimum age" />
           <input type="number" name="maxAge" min={13} max={120} defaultValue={d.maxAge ?? ""} placeholder="Max age" className="input" aria-label="Maximum age" />
-          <select name="genderPreference" defaultValue={d.genderPreference} className="input" aria-label="Gender preference">
+          <select name="genderPreference" defaultValue={d.genderPreference} className="input col-span-2 sm:col-span-1" aria-label="Gender preference">
             <option value="any">Any</option>
             <option value="women">Women</option>
             <option value="men">Men</option>
@@ -228,7 +238,7 @@ export default function ListingForm({
 
       {needsTerms ? (
         <label className="flex items-start gap-2 text-sm text-ink/85">
-          <input type="checkbox" name="acceptTerms" required className="accent-ember mt-0.5" />
+          <input type="checkbox" name="acceptTerms" required className="accent-ember mt-0.5 h-4 w-4 shrink-0" />
           <span>
             I agree to the{" "}
             <a href="/terms" target="_blank" className="text-ember font-semibold hover:underline">

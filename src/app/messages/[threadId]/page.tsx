@@ -73,7 +73,7 @@ export default async function ThreadPage(props: { params: Promise<{ threadId: st
         <ReportForm targetType="user" targetId={other.id} label={`Report ${other.name}`} />
       </div>
 
-      <div className="card p-5 space-y-3 max-h-96 overflow-y-auto">
+      <div className="card p-4 sm:p-5 space-y-3 sm:max-h-96 sm:overflow-y-auto">
         {thread.messages.map((m) => (
           <div key={m.id} className={m.senderId === user.id ? "text-right" : "text-left"}>
             <div

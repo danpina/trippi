@@ -11,6 +11,7 @@ import DateQuickPicks from "@/components/DateQuickPicks";
 import ListingCard from "@/components/ListingCard";
 import SortSelect from "@/components/SortSelect";
 import Pagination from "@/components/Pagination";
+import MobileFilters from "@/components/MobileFilters";
 
 export const metadata: Metadata = {
   title: "Search spare bookings & weekend plans",
@@ -159,6 +160,13 @@ export default async function SearchPage(props: { searchParams: Promise<SearchPa
     results.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
   }
 
+  const activeFilters =
+    (q ? 1 : 0) +
+    selectedSlugs.length +
+    (lat != null ? 1 : 0) +
+    (dateFrom || dateTo ? 1 : 0) +
+    (priceMax != null ? 1 : 0);
+
   const total = results.length;
   const capped = listings.length >= MAX_FETCH;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -233,9 +241,10 @@ export default async function SearchPage(props: { searchParams: Promise<SearchPa
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10 grid md:grid-cols-[260px_1fr] gap-8">
-      <aside className="space-y-5">
-        <h2 className="font-display italic text-xl text-ink">Filters</h2>
+    <div className="max-w-7xl mx-auto px-6 py-6 md:py-10 grid md:grid-cols-[260px_1fr] gap-5 md:gap-8">
+      <aside className="space-y-4">
+        <h2 className="hidden md:block font-display italic text-xl text-ink">Filters</h2>
+        <MobileFilters activeCount={activeFilters}>
         <form method="GET" className="space-y-5 card p-5">
           {/* Carry the chosen sort through a filter change (it lives outside this form). */}
           {sort && <input type="hidden" name="sort" value={sort} />}
@@ -325,6 +334,7 @@ export default async function SearchPage(props: { searchParams: Promise<SearchPa
           </div>
           <button className="btn-primary w-full">Apply filters</button>
         </form>
+        </MobileFilters>
       </aside>
 
       <div>

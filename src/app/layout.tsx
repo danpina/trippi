@@ -52,7 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
             <div>
               <p className="eyebrow text-ink mb-1.5">Site</p>
-              <ul className="space-y-1 text-xs">
+              <ul className="text-xs [&_a]:inline-block [&_a]:py-1.5">
                 <li>
                   <Link href="/safety" className="hover:text-ink hover:underline">
                     Safety tips

@@ -56,10 +56,10 @@ export default async function MessagesPage() {
               <Link
                 key={t.id}
                 href={`/messages/${t.id}`}
-                className="card p-5 flex justify-between items-center gap-4 hover:border-ember/40 hover:shadow-card-hover transition-all"
+                className="card p-4 sm:p-5 flex justify-between items-center gap-3 sm:gap-4 hover:border-ember/40 hover:shadow-card-hover transition-all"
               >
                 <div className="min-w-0">
-                  <div className={`font-display text-lg ${unread ? "font-bold" : "font-medium"}`}>{t.listing.title}</div>
+                  <div className={`font-display text-base sm:text-lg ${unread ? "font-bold" : "font-medium"}`}>{t.listing.title}</div>
                   <div className="text-sm text-slate">with {other.name}</div>
                   {t.messages[0] && (
                     <div className={`text-sm truncate max-w-md mt-1 ${unread ? "text-ink font-semibold" : "text-slate"}`}>

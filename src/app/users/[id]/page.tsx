@@ -58,8 +58,8 @@ export default async function PublicProfilePage(props: { params: Promise<{ id: s
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-14">
-      <div className="flex items-center gap-4 mb-10">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-ember to-gold flex items-center justify-center text-white font-display font-semibold text-2xl">
+      <div className="flex items-center gap-4 mb-8 sm:mb-10">
+        <div className="w-16 h-16 shrink-0 rounded-full bg-gradient-to-br from-ember to-gold flex items-center justify-center text-white font-display font-semibold text-2xl">
           {profile.name[0]}
         </div>
         <div>
@@ -67,7 +67,7 @@ export default async function PublicProfilePage(props: { params: Promise<{ id: s
             <h1 className="font-display text-3xl font-medium text-ink">{profile.name}</h1>
             {isTrustedHost(profile) && <TrustedBadge />}
           </div>
-          <p className="text-sm text-slate mt-1 flex items-center gap-1.5">
+          <p className="text-sm text-slate mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
             {profile.ratingCount > 0 ? (
               <>
                 <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 fill-gold">
@@ -78,8 +78,8 @@ export default async function PublicProfilePage(props: { params: Promise<{ id: s
             ) : (
               "No ratings yet"
             )}
-            <span aria-hidden>·</span>
-            Member since {formatDate(profile.createdAt)}
+            <span aria-hidden className="hidden sm:inline">·</span>
+            <span className="basis-full sm:basis-auto">Member since {formatDate(profile.createdAt)}</span>
           </p>
           {viewer && viewer.id !== profile.id && (
             <ReportForm targetType="user" targetId={profile.id} label={`Report ${firstName(profile.name)}`} />

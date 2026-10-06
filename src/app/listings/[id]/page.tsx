@@ -94,7 +94,7 @@ export default async function ListingDetailPage(props: { params: Promise<{ id: s
         )}
 
         {(isOwner || user?.isAdmin) && (
-          <div className="flex gap-3 mb-4 text-sm font-semibold">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4 text-sm font-semibold [&>a]:whitespace-nowrap">
             <Link href={`/listings/${listing.id}/edit`} className="text-ember hover:underline">
               Edit listing
             </Link>
@@ -116,14 +116,14 @@ export default async function ListingDetailPage(props: { params: Promise<{ id: s
           <span className="tag tag-warm">{listing.listingType === "opportunity" ? "Opportunity" : "Plan"}</span>
         </div>
 
-        <h1 className="font-display text-4xl font-medium text-ink text-balance">{listing.title}</h1>
+        <h1 className="font-display text-3xl sm:text-4xl font-medium text-ink text-balance">{listing.title}</h1>
         <p className="text-slate mt-2">
           {listing.location}
           {listing.addressDetails && ` · ${listing.addressDetails}`}
         </p>
 
-        <div className="grid sm:grid-cols-3 gap-4 mt-8">
-          <div className="card p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-8">
+          <div className="card p-4 col-span-2 sm:col-span-1">
             <div className="eyebrow text-slate">Dates</div>
             <div className="mt-1 font-bold font-display text-lg">{formatDateRange(listing.dateStart, listing.dateEnd)}</div>
             <div className="text-xs font-body font-semibold text-slate mt-0.5">

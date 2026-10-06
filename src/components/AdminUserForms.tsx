@@ -27,16 +27,16 @@ export function AdminUserForm({ user }: { user: UserDetails }) {
   }, [state]);
 
   return (
-    <form onSubmit={onSubmit} className="card p-6 space-y-4">
+    <form onSubmit={onSubmit} className="card p-5 sm:p-6 space-y-4">
       <input type="hidden" name="userId" value={user.id} />
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="col-span-2 sm:col-span-1">
           <label className="eyebrow text-slate" htmlFor="au-name">
             Name
           </label>
           <input id="au-name" name="name" defaultValue={user.name} required maxLength={60} className="input mt-1.5" />
         </div>
-        <div>
+        <div className="col-span-2 sm:col-span-1">
           <label className="eyebrow text-slate" htmlFor="au-email">
             Email
           </label>
@@ -58,7 +58,7 @@ export function AdminUserForm({ user }: { user: UserDetails }) {
             <option value="man">Man</option>
           </select>
         </div>
-        <div>
+        <div className="col-span-2 sm:col-span-1">
           <label className="eyebrow text-slate" htmlFor="au-home">
             Home location
           </label>
