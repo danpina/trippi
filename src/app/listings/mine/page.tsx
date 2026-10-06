@@ -1,9 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { setListingStatusAction } from "@/app/actions";
-import { tripMeta } from "@/lib/dates";
+import { todayUtc, tripMeta } from "@/lib/dates";
+import { formatDateRange } from "@/lib/format";
 
 const MODERATION_LABEL: Record<string, string> = {
   published: "Published",
@@ -22,8 +24,7 @@ export default async function MyListingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/listings/mine");
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  const todayStart = todayUtc();
 
   const listings = await db.listing.findMany({
     where: { ownerId: user.id },
@@ -73,8 +74,7 @@ export default async function MyListingsPage() {
                       {l.title}
                     </Link>
                     <div className="text-sm text-slate mt-1">
-                      {l.category.name} · {l.location} · {new Date(l.dateStart).toLocaleDateString()} –{" "}
-                      {new Date(l.dateEnd).toLocaleDateString()} ({lengthLabel})
+                      {l.category.name} · {l.location} · {formatDateRange(l.dateStart, l.dateEnd)} ({lengthLabel})
                     </div>
                     {l.moderationStatus === "flagged" && l.moderationNotes && (
                       <div className="text-sm text-ember-deep mt-2">{l.moderationNotes}</div>
@@ -101,3 +101,5 @@ export default async function MyListingsPage() {
     </div>
   );
 }
+
+export const metadata: Metadata = { title: "My listings" };

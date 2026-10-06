@@ -6,15 +6,16 @@ moderation gate on every new listing.
 
 ## Stack
 
-- Next.js 14 (App Router) + TypeScript + Tailwind
+- Next.js 15 (App Router) + React 19 + TypeScript + Tailwind
 - Prisma + Postgres (any host works — Neon and Supabase both have a workable free tier)
 - Auth: custom email+password, signed JWT in an httpOnly cookie (no external auth provider yet)
 - Server Actions for all writes (register, login, post listing, contact host, send message,
   submit rating, admin moderate) — no separate API layer needed at this scale
 - Map: MapLibre GL (open-source vector renderer) + MapTiler vector tiles, needs a free
   `NEXT_PUBLIC_MAPTILER_KEY` (see below)
-- Geocoding: OpenStreetMap's Nominatim, free, no key — fine for this stage's traffic, revisit
-  before real volume (their usage policy caps automated/heavy use)
+- Geocoding: MapTiler (same key as the map tiles) — place autocomplete in the browser, plus a
+  server-side lookup for listings whose location was typed without picking a suggestion
+- Photos: Supabase Storage bucket `listing-photos`, resized in the browser before upload
 
 ## Run it
 
@@ -44,8 +45,10 @@ Demo accounts (from the seed):
 - Host: `chamonix.chalet@example.com` / `demo1234`
 - Test/buyer: `test@tripswap.dev` / `test1234` — plain account, not an owner or admin, for
   testing the search/contact/rate side without needing a fresh signup each time
-- Admin: whatever `ADMIN_EMAIL` you set / `admin1234` — the first user to register with that
-  email is auto-promoted to admin
+- Admin: not created by signup. Register normally, then promote that account once with
+  `update "User" set "isAdmin" = true where email = 'you@example.com'` (or Prisma Studio).
+  The seed creates an admin for `ADMIN_EMAIL` with the password `admin1234` — change it
+  immediately in Settings.
 
 ## What's implemented
 
@@ -73,11 +76,11 @@ identity verification, group chats, AI-assisted moderation.
 
 - Postgres without PostGIS — radius search is haversine math in the app layer, fine at this
   scale, revisit if the listing count gets large enough for it to matter
-- Photo "upload" is just pasting image URLs — no actual file upload/storage wired up
-- Pinned to Next.js 14.2.35 — the latest patch release in the 14.x line, but a few CVEs remain
-  that only a 15.x/16.x major upgrade fixes (mostly self-hosted/server-action edge cases). That
-  upgrade touches `cookies()` and `searchParams` across most pages (they become async in 15+),
-  so it's a deliberate follow-up, not bundled into going live.
+- `npm audit` still lists Tailwind 3 build-time tooling (braces/micromatch/postcss); they only
+  run during builds on trusted input, and fixing them means a Tailwind 4 migration
+- Moderation is rule-based only; reports and the admin queue are manual
+- Storage objects can't be deleted with the public key, so removed/deleted photos stay in the
+  bucket (purge them from the Supabase dashboard if needed)
 
 ## Deploying
 
@@ -93,7 +96,13 @@ database on Supabase.
    - `DIRECT_URL` — unpooled connection string, same note
    - `SESSION_SECRET` — a random 32+ byte value, e.g.
      `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
-   - `ADMIN_EMAIL` — whichever email should be auto-promoted to admin on first registration
+   - `ADMIN_EMAIL` — used by the seed script only
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_KEY` — Supabase project URL and
+     *publishable* key (photo uploads)
+   - `NEXT_PUBLIC_SITE_URL` — the public site URL (emails, sitemap, social previews)
+   - `NEXT_PUBLIC_CONTACT_EMAIL` — a real, monitored contact address (footer, legal pages)
+   - `RESEND_API_KEY`, `EMAIL_FROM` — optional; enables password-reset and new-message emails
+     (without them the link/message is only logged and nothing is sent)
    - `NEXT_PUBLIC_MAPTILER_KEY` — your MapTiler key
 4. Push the schema to the production database once (from your machine, with `DATABASE_URL`/
    `DIRECT_URL` pointed at production): `npx prisma db push`, then `npm run db:seed` if you
@@ -127,3 +136,13 @@ wrong causes two different failure modes:**
 `prisma/schema.prisma`'s `datasource` block declares both `url` (→ `DATABASE_URL`) and
 `directUrl` (→ `DIRECT_URL`) for exactly this split — Prisma uses `directUrl` automatically for
 migration commands and `url` for everything else.
+
+## Development
+
+```bash
+npm test          # unit tests (vitest)
+npm run lint
+npm run typecheck
+```
+
+CI (`.github/workflows/ci.yml`) runs typecheck, lint, tests and a production build on every push.

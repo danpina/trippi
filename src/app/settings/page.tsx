@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import SettingsForm from "@/components/SettingsForm";
@@ -12,3 +13,5 @@ export default async function SettingsPage() {
     />
   );
 }
+
+export const metadata: Metadata = { title: "Settings" };

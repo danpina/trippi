@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { adminModerateAction, dismissReportAction } from "@/app/actions";
+import { formatDate } from "@/lib/format";
 
 export default async function AdminPage() {
   const user = await getCurrentUser();
@@ -40,6 +42,7 @@ export default async function AdminPage() {
       } else if (r.targetType === "user") {
         const u = await db.user.findUnique({ where: { id: r.targetId } });
         targetLabel = u?.name ?? "(user no longer exists)";
+        targetHref = u ? `/users/${u.id}` : null;
       }
       return { ...r, targetLabel, targetHref };
     })
@@ -134,7 +137,7 @@ export default async function AdminPage() {
                   )}
                   <div className="text-slate mt-1">{r.reason}</div>
                   <div className="text-xs text-slate mt-1">
-                    reported by {r.reporter.name} · {new Date(r.createdAt).toLocaleDateString()}
+                    reported by {r.reporter.name} · {formatDate(r.createdAt)}
                   </div>
                 </div>
                 <form action={dismissReportAction} className="shrink-0">
@@ -149,3 +152,5 @@ export default async function AdminPage() {
     </div>
   );
 }
+
+export const metadata: Metadata = { title: "Moderation" };

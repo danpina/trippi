@@ -23,6 +23,7 @@ export default function SortSelect({ defaultValue }: { defaultValue?: string }) 
       defaultValue={defaultValue || ""}
       onChange={(e) => {
         const params = new URLSearchParams(searchParams.toString());
+        params.delete("page");
         if (e.target.value) params.set("sort", e.target.value);
         else params.delete("sort");
         router.push(`/search?${params.toString()}`);

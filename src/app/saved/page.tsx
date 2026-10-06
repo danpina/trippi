@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -13,7 +14,7 @@ export default async function SavedPage() {
     orderBy: { createdAt: "desc" },
     include: {
       listing: {
-        include: { category: { include: { parent: true } }, owner: true, photos: { take: 1 } },
+        include: { category: { include: { parent: true } }, owner: true, photos: { orderBy: { sortOrder: "asc" }, take: 1 } },
       },
     },
   });
@@ -44,3 +45,5 @@ export default async function SavedPage() {
     </div>
   );
 }
+
+export const metadata: Metadata = { title: "Saved listings" };

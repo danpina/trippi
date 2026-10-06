@@ -1,10 +1,16 @@
+import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { sendMessageAction, submitRatingAction } from "@/app/actions";
+import { submitRatingAction } from "@/app/actions";
+import MessageForm from "@/components/MessageForm";
 import ReportForm from "@/components/ReportForm";
 import TrustedBadge from "@/components/TrustedBadge";
 import { isTrustedHost } from "@/lib/trust";
+import { formatDateTime } from "@/lib/format";
+
+export const metadata: Metadata = { title: "Conversation" };
 
 export default async function ThreadPage(props: { params: Promise<{ threadId: string }> }) {
   const params = await props.params;
@@ -24,6 +30,12 @@ export default async function ThreadPage(props: { params: Promise<{ threadId: st
   if (!thread) notFound();
   if (thread.initiatorId !== user.id && thread.ownerId !== user.id) notFound();
 
+  // Opening the conversation marks it read for this user (drives the unread badge).
+  await db.thread.update({
+    where: { id: thread.id },
+    data: thread.initiatorId === user.id ? { initiatorReadAt: new Date() } : { ownerReadAt: new Date() },
+  });
+
   const other = thread.initiatorId === user.id ? thread.owner : thread.initiator;
   const distinctSenders = new Set(thread.messages.map((m) => m.senderId));
   const bothReplied = distinctSenders.has(thread.initiatorId) && distinctSenders.has(thread.ownerId);
@@ -32,11 +44,16 @@ export default async function ThreadPage(props: { params: Promise<{ threadId: st
   return (
     <div className="max-w-2xl mx-auto px-6 py-14">
       <div className="mb-4">
-        <a href={`/listings/${thread.listingId}`} className="text-sm text-ember font-bold hover:underline">
+        <Link href={`/listings/${thread.listingId}`} className="text-sm text-ember font-bold hover:underline">
           ← {thread.listing.title}
-        </a>
+        </Link>
       </div>
-      <h1 className="font-display italic text-2xl text-ink mb-1">Conversation with {other.name}</h1>
+      <h1 className="font-display italic text-2xl text-ink mb-1">
+        Conversation with{" "}
+        <Link href={`/users/${other.id}`} className="hover:text-ember">
+          {other.name}
+        </Link>
+      </h1>
       <div className="flex items-center justify-between mb-6">
         <p className="text-sm text-slate flex items-center gap-2">
           {other.ratingCount > 0 ? (
@@ -61,23 +78,21 @@ export default async function ThreadPage(props: { params: Promise<{ threadId: st
           <div key={m.id} className={m.senderId === user.id ? "text-right" : "text-left"}>
             <div
               className={
-                "inline-block px-4 py-2.5 rounded-2xl text-sm max-w-[80%] " +
+                "inline-block px-4 py-2.5 rounded-2xl text-sm max-w-[80%] text-left whitespace-pre-wrap break-words " +
                 (m.senderId === user.id ? "bg-ember text-white rounded-br-sm" : "bg-glacier-soft text-ink rounded-bl-sm")
               }
             >
               {m.body}
             </div>
-            <div className="text-[11px] text-slate mt-0.5">{m.sender.name}</div>
+            <div className="text-[11px] text-slate mt-0.5">
+              {m.sender.name} · {formatDateTime(m.createdAt)}
+            </div>
           </div>
         ))}
         {thread.messages.length === 0 && <p className="text-sm text-slate">Say hello to get things started.</p>}
       </div>
 
-      <form action={sendMessageAction} className="mt-4 flex gap-2">
-        <input type="hidden" name="threadId" value={thread.id} />
-        <input name="body" required className="input flex-1" placeholder="Write a message…" />
-        <button className="btn-primary">Send</button>
-      </form>
+      <MessageForm threadId={thread.id} />
 
       {bothReplied && (
         <div className="card p-6 mt-8">
@@ -99,8 +114,10 @@ export default async function ThreadPage(props: { params: Promise<{ threadId: st
               name="comment"
               defaultValue={myRating?.comment ?? ""}
               rows={2}
+              maxLength={1000}
               className="input"
               placeholder="Optional note about the experience"
+              aria-label="Rating comment"
             />
             <button className="btn-primary">{myRating ? "Update rating" : "Submit rating"}</button>
           </form>

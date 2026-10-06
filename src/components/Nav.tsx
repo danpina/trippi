@@ -2,20 +2,33 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { logoutAction } from "@/app/actions";
 import TrustedBadge from "@/components/TrustedBadge";
+import MobileMenuCloser from "@/components/MobileMenuCloser";
 import { isTrustedHost } from "@/lib/trust";
+import { countUnreadThreads } from "@/lib/unread";
 
 export default async function Nav() {
   const user = await getCurrentUser();
+  const unread = user ? await countUnreadThreads(user.id) : 0;
 
   const linkCls = "hidden md:inline-block px-3 py-2 text-ink/80 hover:text-ink font-semibold";
   const mobileLinkCls = "px-3 py-2.5 rounded-lg text-ink/85 hover:bg-mist font-semibold";
+  const badge =
+    unread > 0 ? (
+      <span
+        className="ml-1.5 inline-flex min-w-[1.25rem] h-5 items-center justify-center rounded-full bg-ember px-1.5 text-[11px] font-bold text-white"
+        aria-label={`${unread} unread`}
+      >
+        {unread}
+      </span>
+    ) : null;
 
   return (
     <header className="sticky top-0 z-30 bg-mist/80 backdrop-blur-md border-b border-line">
-      {/* Checkbox-driven mobile menu — no client JS needed. It and the dropdown panel below
-          are both direct children of <header> so Tailwind's peer-checked sibling selector
-          can toggle the panel. */}
+      {/* Checkbox-driven mobile menu — no client JS needed to toggle it. It and the dropdown
+          panel below are both direct children of <header> so Tailwind's peer-checked sibling
+          selector can toggle the panel; MobileMenuCloser unchecks it on navigation. */}
       <input type="checkbox" id="nav-toggle" className="hidden peer" />
+      <MobileMenuCloser />
 
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
@@ -39,8 +52,9 @@ export default async function Nav() {
               <Link href="/listings/mine" className={linkCls}>
                 My listings
               </Link>
-              <Link href="/messages" className={linkCls}>
+              <Link href="/messages" className={`${linkCls} !inline-flex items-center`}>
                 Messages
+                {badge}
               </Link>
               <Link href="/saved" className={linkCls}>
                 Saved
@@ -89,14 +103,11 @@ export default async function Nav() {
               Log in
             </Link>
           )}
-          <label
-            htmlFor="nav-toggle"
-            className="cursor-pointer p-2 -mr-2 text-ink"
-            aria-label="Open menu"
-          >
+          <label htmlFor="nav-toggle" className="relative cursor-pointer p-2 -mr-2 text-ink" aria-label="Open menu">
             <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
             </svg>
+            {unread > 0 && <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-ember ring-2 ring-mist" />}
           </label>
         </div>
       </div>
@@ -113,8 +124,9 @@ export default async function Nav() {
             <Link href="/listings/mine" className={mobileLinkCls}>
               My listings
             </Link>
-            <Link href="/messages" className={mobileLinkCls}>
+            <Link href="/messages" className={`${mobileLinkCls} flex items-center`}>
               Messages
+              {badge}
             </Link>
             <Link href="/saved" className={mobileLinkCls}>
               Saved

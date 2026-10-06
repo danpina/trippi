@@ -2,8 +2,12 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 
+// Local calendar date as YYYY-MM-DD. (toISOString() converts to UTC first, which in any
+// timezone ahead of UTC turned "Saturday" into the Friday before.)
 function fmt(d: Date) {
-  return d.toISOString().slice(0, 10);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
 // "This weekend" means the upcoming Sat/Sun — if today already is Sat/Sun, that's this
@@ -27,6 +31,7 @@ export default function DateQuickPicks() {
 
   function apply(from: Date | null, to: Date | null) {
     const params = new URLSearchParams(searchParams.toString());
+    params.delete("page");
     if (from) params.set("dateFrom", fmt(from));
     else params.delete("dateFrom");
     if (to) params.set("dateTo", fmt(to));

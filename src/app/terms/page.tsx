@@ -1,3 +1,8 @@
+import type { Metadata } from "next";
+import { CONTACT_EMAIL } from "@/lib/site";
+
+export const metadata: Metadata = { title: "Terms & disclaimer" };
+
 export default function TermsPage() {
   return (
     <div className="max-w-2xl mx-auto px-6 py-14">
@@ -61,9 +66,20 @@ export default function TermsPage() {
         <section>
           <h2 className="font-display italic text-xl text-ink mb-2">Contact</h2>
           <p className="text-sm text-ink/85">
-            Questions about these terms:{" "}
-            <a href="mailto:hello@tripswap.dev" className="text-ember font-semibold hover:underline">
-              hello@tripswap.dev
+            {CONTACT_EMAIL ? (
+              <>
+                Questions about these terms:{" "}
+                <a href={`mailto:${CONTACT_EMAIL}`} className="text-ember font-semibold hover:underline">
+                  {CONTACT_EMAIL}
+                </a>
+                .
+              </>
+            ) : (
+              "A contact address will be published here soon. Meanwhile, use the Report links on listings and conversations."
+            )}{" "}
+            See also the{" "}
+            <a href="/privacy" className="text-ember font-semibold hover:underline">
+              Privacy policy
             </a>
             .
           </p>

@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { updateListingAction } from "@/app/actions";
 import ListingForm from "@/components/ListingForm";
+
+export const metadata: Metadata = { title: "Edit listing" };
 
 function toDateInput(d: Date) {
   return new Date(d).toISOString().slice(0, 10);
@@ -40,6 +43,7 @@ export default async function EditListingPage(props: { params: Promise<{ id: str
         categories={categories}
         submitLabel="Save changes"
         listingId={listing.id}
+        needsTerms={!user.acceptedTermsAt}
         defaults={{
           listingType: listing.listingType,
           categoryId: listing.categoryId,

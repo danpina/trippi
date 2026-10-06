@@ -5,6 +5,7 @@ import * as maplibregl from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { styleFor } from "@/lib/categoryStyle";
+import { formatPrice } from "@/lib/format";
 
 maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
@@ -106,6 +107,7 @@ export default function SearchMapInner({
       const hits = map.queryRenderedFeatures(e.point, { layers: CLUSTER_LAYERS.filter((id) => map.getLayer(id)) });
       if (hits.length > 0) return;
       const params = new URLSearchParams(searchParamsRef.current.toString());
+      params.delete("page");
       params.set("lat", e.lngLat.lat.toFixed(4));
       params.set("lng", e.lngLat.lng.toFixed(4));
       params.set("locationLabel", `${e.lngLat.lat.toFixed(2)}, ${e.lngLat.lng.toFixed(2)}`);
@@ -197,13 +199,23 @@ export default function SearchMapInner({
         const feature = e.features?.[0];
         if (!feature) return;
         const { id, title, price, location } = feature.properties as any;
+        // Built with DOM nodes + textContent, never an HTML string: title and location are
+        // user-controlled, so interpolating them into setHTML() was a stored-XSS hole.
+        const box = document.createElement("div");
+        const link = document.createElement("a");
+        link.href = `/listings/${encodeURIComponent(String(id))}`;
+        link.textContent = String(title);
+        link.style.cssText = "font-weight:700;color:#0E1A16;text-decoration:none";
+        const loc = document.createElement("div");
+        loc.textContent = String(location);
+        loc.style.cssText = "font-size:12px;color:#5B6B63;margin-top:2px";
+        const cost = document.createElement("div");
+        cost.textContent = price ? formatPrice(Number(price)) : "Free";
+        cost.style.cssText = "font-size:13px;font-weight:700;margin-top:4px";
+        box.append(link, loc, cost);
         new maplibregl.Popup({ offset: 12, closeButton: false })
           .setLngLat((feature.geometry as GeoJSON.Point).coordinates as [number, number])
-          .setHTML(
-            `<a href="/listings/${id}" style="font-weight:700;color:#0E1A16;text-decoration:none">${title}</a>
-             <div style="font-size:12px;color:#5B6B63;margin-top:2px">${location}</div>
-             <div style="font-size:13px;font-weight:700;margin-top:4px">${price ? `€${price}` : "Free"}</div>`
-          )
+          .setDOMContent(box)
           .addTo(map);
       });
 

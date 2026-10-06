@@ -11,7 +11,20 @@ const BANNED_TERMS = [
   "guaranteed returns",
 ];
 
-const PHONE_OR_URL_PATTERN = /(\+?\d[\d\s-]{7,}\d)|(https?:\/\/)|(\bwww\.)/i;
+const DATE_LIKE = /\b\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}\b/g;
+const LINK = /(https?:\/\/)|(\bwww\.)/i;
+
+// Dates ("15-12-2026"), booking references and flight numbers are long digit runs too, so
+// strip date-like text first and only treat 9+ digits (8+ with a leading +) as a phone number.
+export function looksLikePhoneOrLink(text: string): boolean {
+  if (LINK.test(text)) return true;
+  const stripped = text.replace(DATE_LIKE, " ");
+  for (const m of stripped.matchAll(/\+?\d[\d\s().-]{6,}\d/g)) {
+    const digits = m[0].replace(/\D/g, "").length;
+    if (m[0].startsWith("+") ? digits >= 8 : digits >= 9) return true;
+  }
+  return false;
+}
 
 export type ModerationInput = {
   title: string;
@@ -35,7 +48,7 @@ export function runModerationRules(input: ModerationInput): ModerationResult {
     if (text.includes(term)) notes.push(`Banned term detected: "${term}"`);
   }
 
-  if (PHONE_OR_URL_PATTERN.test(input.title) || PHONE_OR_URL_PATTERN.test(input.description)) {
+  if (looksLikePhoneOrLink(input.title) || looksLikePhoneOrLink(input.description)) {
     notes.push("Contains a phone number or external link — possible attempt to route around the platform.");
   }
 
@@ -48,7 +61,7 @@ export function runModerationRules(input: ModerationInput): ModerationResult {
   }
 
   const now = Date.now();
-  if (input.dateEnd.getTime() < now) {
+  if (input.dateEnd.getTime() < now - 86400000) {
     notes.push("Date range is entirely in the past.");
   }
   if (input.dateStart.getTime() > now + 1000 * 60 * 60 * 24 * 365 * 2) {

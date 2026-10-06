@@ -2,11 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-
-type Suggestion = { label: string; lat: number; lng: number };
-
-// Soft bias toward Europe (left,top,right,bottom) — results outside this box can still show.
-const EUROPE_VIEWBOX = "-25,72,45,34";
+import { searchPlaces, type PlaceSuggestion } from "@/lib/placesClient";
 
 // Lives in the dark hero, so it keeps its own styling rather than reusing LocationPicker
 // (built for the light sidebar). Selecting a suggestion jumps straight to geocoded results;
@@ -15,11 +11,10 @@ const EUROPE_VIEWBOX = "-25,72,45,34";
 export default function HeroSearchInput() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNextFetch = useRef(false);
 
   useEffect(() => {
@@ -31,26 +26,20 @@ export default function HeroSearchInput() {
       setSuggestions([]);
       return;
     }
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(query)}&viewbox=${EUROPE_VIEWBOX}`,
-          { signal: controller.signal, headers: { Accept: "application/json" } }
-        );
-        const data = await res.json();
-        setSuggestions(data.map((d: any) => ({ label: d.display_name, lat: Number(d.lat), lng: Number(d.lon) })));
-        setOpen(true);
-      } catch {
-        // aborted or offline — leave suggestions as-is, plain keyword search still works
+      const results = await searchPlaces(query, controller.signal);
+      if (!controller.signal.aborted) {
+        setSuggestions(results);
+        setOpen(results.length > 0);
       }
-    }, 200);
+    }, 150);
+    return () => clearTimeout(timer);
   }, [query]);
 
-  function selectSuggestion(s: Suggestion) {
+  function selectSuggestion(s: PlaceSuggestion) {
     skipNextFetch.current = true;
     setQuery(s.label);
     setOpen(false);
@@ -79,6 +68,7 @@ export default function HeroSearchInput() {
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder="Where to? e.g. Chamonix"
         autoComplete="off"
+        aria-label="Where to?"
         className="w-full bg-transparent px-4 py-3 text-white placeholder-white/50 outline-none"
       />
       {open && suggestions.length > 0 && (

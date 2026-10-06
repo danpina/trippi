@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 export default function SafetyPage() {
   return (
     <div className="max-w-2xl mx-auto px-6 py-14">
@@ -27,7 +28,7 @@ export default function SafetyPage() {
           <ul className="list-disc pl-5 space-y-2 text-sm text-ink/85">
             <li>TripSwap doesn&apos;t process payment yet — you and the other person arrange it directly, so there&apos;s no purchase protection behind it.</li>
             <li>Prefer traceable payment methods over cash or a direct bank transfer to someone you&apos;ve just met.</li>
-            <li>Watch for urgency ("pay now or lose it") — that&apos;s a common pressure tactic. A genuine spare booking can wait for you to feel comfortable.</li>
+            <li>Watch for urgency (&quot;pay now or lose it&quot;) — that&apos;s a common pressure tactic. A genuine spare booking can wait for you to feel comfortable.</li>
             <li>Never pay before you can see or verify the actual booking confirmation in the other person&apos;s name.</li>
           </ul>
         </section>
@@ -54,3 +55,5 @@ export default function SafetyPage() {
     </div>
   );
 }
+
+export const metadata: Metadata = { title: "Staying safe" };

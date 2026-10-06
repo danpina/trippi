@@ -1,5 +1,9 @@
+"use client";
+
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import LocationPicker from "./LocationPicker";
 import PhotoManager from "./PhotoManager";
+import type { ListingState } from "@/app/actions";
 
 type CategoryOption = {
   id: string;
@@ -54,25 +58,43 @@ export default function ListingForm({
   submitLabel,
   listingId,
   existingPhotos,
+  needsTerms,
 }: {
-  action: (formData: FormData) => void;
+  action: (prev: ListingState, formData: FormData) => Promise<ListingState>;
   categories: CategoryOption[];
   defaults?: Partial<ListingFormDefaults>;
   submitLabel: string;
   listingId?: string;
   existingPhotos?: { id: string; url: string }[];
+  needsTerms: boolean;
 }) {
   const d = { ...emptyDefaults, ...defaults };
+  const [state, formAction, pending] = useActionState(action, undefined);
+  const [photosBusy, setPhotosBusy] = useState(false);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (state?.error) errorRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [state]);
 
   return (
-    <form action={action} className="card p-7 space-y-5">
+    <form
+      // Submitting through onSubmit (not the `action` prop) keeps React from resetting the
+      // form after a validation error, so nothing the user typed or picked is lost.
+      onSubmit={(e) => {
+        e.preventDefault();
+        const data = new FormData(e.currentTarget);
+        startTransition(() => formAction(data));
+      }}
+      className="card p-7 space-y-5"
+    >
       {listingId && <input type="hidden" name="listingId" value={listingId} />}
 
       <div>
         <label className="eyebrow text-slate">Listing type</label>
         <select name="listingType" defaultValue={d.listingType} className="input mt-1.5">
           <option value="opportunity">Opportunity — a real booking with a fixed price</option>
-          <option value="plan">Plan — a looser "join us" post, no fixed price</option>
+          <option value="plan">Plan — a looser &quot;join us&quot; post, no fixed price</option>
         </select>
       </div>
 
@@ -99,6 +121,7 @@ export default function ListingForm({
           name="title"
           required
           minLength={8}
+          maxLength={120}
           defaultValue={d.title}
           placeholder="Spare week in a Chamonix chalet"
           className="input mt-1.5"
@@ -111,6 +134,7 @@ export default function ListingForm({
           name="description"
           required
           minLength={30}
+          maxLength={4000}
           rows={5}
           defaultValue={d.description}
           className="input mt-1.5"
@@ -127,15 +151,19 @@ export default function ListingForm({
             defaultLat={d.lat != null ? String(d.lat) : undefined}
             defaultLng={d.lng != null ? String(d.lng) : undefined}
             placeholder="Chamonix, France"
+            required
           />
         </div>
-        <p className="text-xs text-slate mt-1.5">Pick a suggestion so this shows up on the map — or just type a place name.</p>
+        <p className="text-xs text-slate mt-1.5">
+          Pick a suggestion for the most accurate map pin — if you just type a place name, we&apos;ll look it up for you.
+        </p>
       </div>
 
       <div>
         <label className="eyebrow text-slate">Address details (optional)</label>
         <input
           name="addressDetails"
+          maxLength={200}
           defaultValue={d.addressDetails}
           placeholder="Street, building, meeting point…"
           className="input mt-1.5"
@@ -157,11 +185,11 @@ export default function ListingForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="eyebrow text-slate">Price (€, blank = free)</label>
-          <input type="number" step="any" name="price" defaultValue={d.price ?? ""} className="input mt-1.5" />
+          <input type="number" step="any" min={0} max={50000} name="price" defaultValue={d.price ?? ""} className="input mt-1.5" />
         </div>
         <div>
           <label className="eyebrow text-slate">Capacity</label>
-          <input type="number" name="capacity" defaultValue={d.capacity} min={1} className="input mt-1.5" />
+          <input type="number" name="capacity" defaultValue={d.capacity} min={1} max={100} className="input mt-1.5" />
         </div>
       </div>
 
@@ -173,9 +201,9 @@ export default function ListingForm({
       <fieldset className="border border-line rounded-xl p-4">
         <legend className="eyebrow text-slate px-1">Filtering preferences (optional, never a requirement to contact)</legend>
         <div className="grid grid-cols-3 gap-3 mt-1">
-          <input type="number" name="minAge" defaultValue={d.minAge ?? ""} placeholder="Min age" className="input" />
-          <input type="number" name="maxAge" defaultValue={d.maxAge ?? ""} placeholder="Max age" className="input" />
-          <select name="genderPreference" defaultValue={d.genderPreference} className="input">
+          <input type="number" name="minAge" min={13} max={120} defaultValue={d.minAge ?? ""} placeholder="Min age" className="input" aria-label="Minimum age" />
+          <input type="number" name="maxAge" min={13} max={120} defaultValue={d.maxAge ?? ""} placeholder="Max age" className="input" aria-label="Maximum age" />
+          <select name="genderPreference" defaultValue={d.genderPreference} className="input" aria-label="Gender preference">
             <option value="any">Any</option>
             <option value="women">Women</option>
             <option value="men">Men</option>
@@ -186,38 +214,48 @@ export default function ListingForm({
       <div>
         <label className="eyebrow text-slate">Photos (optional)</label>
         <div className="mt-1.5">
-          <PhotoManager existingPhotos={existingPhotos} />
+          <PhotoManager existingPhotos={existingPhotos} onBusyChange={setPhotosBusy} />
         </div>
         <details className="mt-3">
-          <summary className="text-xs text-slate cursor-pointer hover:text-ink">
-            Advanced: paste image URLs instead
-          </summary>
-          <textarea
-            name="photoUrls"
-            rows={2}
-            defaultValue={d.photoUrls}
-            className="input mt-1.5"
-            placeholder="https://…"
-          />
+          <summary className="text-xs text-slate cursor-pointer hover:text-ink">Advanced: paste image URLs instead</summary>
+          <textarea name="photoUrls" rows={2} defaultValue={d.photoUrls} className="input mt-1.5" placeholder="https://…" />
           <p className="text-xs text-slate mt-1.5">
-            Most links to photos hosted elsewhere (Google Photos, Instagram, etc.) won't actually load here — they
+            Most links to photos hosted elsewhere (Google Photos, Instagram, etc.) won&apos;t actually load here — they
             block hotlinking. A direct image URL (ending in .jpg/.png, from somewhere like Imgur) works fine.
           </p>
         </details>
       </div>
 
-      <label className="flex items-start gap-2 text-sm text-ink/85">
-        <input type="checkbox" required className="accent-ember mt-0.5" />
-        <span>
-          I agree to the{" "}
+      {needsTerms ? (
+        <label className="flex items-start gap-2 text-sm text-ink/85">
+          <input type="checkbox" name="acceptTerms" required className="accent-ember mt-0.5" />
+          <span>
+            I agree to the{" "}
+            <a href="/terms" target="_blank" className="text-ember font-semibold hover:underline">
+              Terms &amp; disclaimer
+            </a>{" "}
+            — TripSwap only connects people and takes no responsibility for what&apos;s arranged between them.
+          </span>
+        </label>
+      ) : (
+        <p className="text-xs text-slate">
+          TripSwap only connects people and takes no responsibility for what&apos;s arranged between them — see the{" "}
           <a href="/terms" target="_blank" className="text-ember font-semibold hover:underline">
             Terms &amp; disclaimer
-          </a>{" "}
-          — TripSwap only connects people and takes no responsibility for what's arranged between them.
-        </span>
-      </label>
+          </a>
+          .
+        </p>
+      )}
 
-      <button className="btn-primary w-full">{submitLabel}</button>
+      {state?.error && (
+        <div ref={errorRef} role="alert" className="rounded-xl bg-ember-soft border border-ember/30 px-4 py-3 text-sm text-ember-deep font-semibold">
+          {state.error}
+        </div>
+      )}
+
+      <button className="btn-primary w-full" disabled={pending || photosBusy}>
+        {pending ? "Saving…" : photosBusy ? "Preparing photos…" : submitLabel}
+      </button>
     </form>
   );
 }

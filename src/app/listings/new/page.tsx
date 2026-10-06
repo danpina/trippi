@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { createListingAction } from "@/app/actions";
 import ListingForm from "@/components/ListingForm";
+
+export const metadata: Metadata = { title: "Post a listing" };
 
 export default async function NewListingPage() {
   const user = await getCurrentUser();
@@ -23,7 +26,12 @@ export default async function NewListingPage() {
         anything the rules flag goes to a human moderator instead of being rejected outright.
       </p>
 
-      <ListingForm action={createListingAction} categories={categories} submitLabel="Publish listing" />
+      <ListingForm
+        action={createListingAction}
+        categories={categories}
+        submitLabel="Publish listing"
+        needsTerms={!user.acceptedTermsAt}
+      />
     </div>
   );
 }

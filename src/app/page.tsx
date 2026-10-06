@@ -5,10 +5,11 @@ import CategoryIcon from "@/components/CategoryIcon";
 import ListingCard from "@/components/ListingCard";
 import HeroSearchInput from "@/components/HeroSearchInput";
 import { styleFor } from "@/lib/categoryStyle";
+import { todayUtc } from "@/lib/dates";
 
-export default async function HomePage() {
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+export default async function HomePage(props: { searchParams: Promise<{ deleted?: string }> }) {
+  const { deleted } = await props.searchParams;
+  const todayStart = todayUtc();
 
   const user = await getCurrentUser();
   const [featured, categories] = await Promise.all([
@@ -21,7 +22,7 @@ export default async function HomePage() {
       },
       orderBy: [{ boosted: "desc" }, { createdAt: "desc" }],
       take: 6,
-      include: { category: { include: { parent: true } }, owner: true, photos: { take: 1 } },
+      include: { category: { include: { parent: true } }, owner: true, photos: { orderBy: { sortOrder: "asc" }, take: 1 } },
     }),
     db.category.findMany({ where: { parentId: null }, orderBy: { name: "asc" } }),
   ]);
@@ -39,6 +40,11 @@ export default async function HomePage() {
 
   return (
     <div>
+      {deleted === "1" && (
+        <div role="status" className="bg-glacier-soft text-glacier-deep text-sm font-semibold text-center px-6 py-2.5">
+          Your account and data have been deleted.
+        </div>
+      )}
       {/* Hero — search-first, like BlaBlaCar/Airbnb/Kleinanzeigen: the search bar carries the
           page, not a headline. Alpenglow mood kept in a strip, not a slab. */}
       <section className="relative overflow-hidden bg-ink text-white">

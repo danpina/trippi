@@ -1,12 +1,21 @@
+import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { distanceKm } from "@/lib/geo";
+import { todayUtc } from "@/lib/dates";
+import { parseDay } from "@/lib/listingForm";
 import SearchMap from "@/components/SearchMap";
 import ResultsViewToggle from "@/components/ResultsViewToggle";
 import LocationPicker from "@/components/LocationPicker";
 import DateQuickPicks from "@/components/DateQuickPicks";
 import ListingCard from "@/components/ListingCard";
 import SortSelect from "@/components/SortSelect";
+import Pagination from "@/components/Pagination";
+
+export const metadata: Metadata = {
+  title: "Search spare bookings & weekend plans",
+  description: "Filter by activity, dates, price and distance to find a last-minute spare booking or plan.",
+};
 
 type SearchParams = {
   q?: string;
@@ -19,12 +28,25 @@ type SearchParams = {
   radius?: string;
   locationLabel?: string;
   sort?: string;
+  page?: string;
+};
+
+// Listings are filtered and sorted in memory (distance needs it anyway), so the query is
+// capped. Past this many matches the list is truncated and the count reads "N+".
+const MAX_FETCH = 500;
+const PAGE_SIZE = 24;
+const SORT_KEYS = ["price", "distance", "rating", "date"];
+
+type Sortable = {
+  price: number | null;
+  distance: number | null;
+  owner: { avgRating: number; ratingCount: number };
+  dateStart: Date;
 };
 
 // Null-safe comparator per sort key — distance/rating can be missing (no point picked yet,
-// host has no ratings), and those should sink to the end regardless of direction rather than
-// winning ties by accident.
-function compareBy(key: string, a: { price: number | null; distance: number | null; owner: { avgRating: number; ratingCount: number }; dateStart: Date }, b: typeof a) {
+// host has no ratings), and those should sink to the end rather than winning ties by accident.
+function compareBy(key: string, a: Sortable, b: Sortable) {
   if (key === "price") return (a.price ?? 0) - (b.price ?? 0);
   if (key === "distance") {
     if (a.distance == null && b.distance == null) return 0;
@@ -44,6 +66,12 @@ function compareBy(key: string, a: { price: number | null; distance: number | nu
 function toArray(v: string | string[] | undefined): string[] {
   if (!v) return [];
   return Array.isArray(v) ? v : [v];
+}
+
+function finite(v: string | undefined): number | null {
+  if (v === undefined || v.trim() === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 async function resolveCategoryIds(slugs: string[]) {
@@ -71,28 +99,36 @@ export default async function SearchPage(props: { searchParams: Promise<SearchPa
     include: { children: { orderBy: { name: "asc" } } },
   });
 
-  const where: any = {
-    moderationStatus: "published",
-    status: "active",
-  };
+  // Every URL param is user input: anything malformed is ignored rather than passed to the
+  // database (which used to 500 on e.g. ?priceMax=abc).
+  const q = (searchParams.q || "").trim().slice(0, 100);
+  const priceMax = finite(searchParams.priceMax);
+  const dateFrom = searchParams.dateFrom ? parseDay(searchParams.dateFrom) : null;
+  const dateTo = searchParams.dateTo ? parseDay(searchParams.dateTo) : null;
+  const latRaw = finite(searchParams.lat);
+  const lngRaw = finite(searchParams.lng);
+  const lat = latRaw != null && lngRaw != null && Math.abs(latRaw) <= 90 && Math.abs(lngRaw) <= 180 ? latRaw : null;
+  const lng = lat != null ? lngRaw : null;
+  const radiusRaw = finite(searchParams.radius);
+  const radius = radiusRaw != null && radiusRaw > 0 ? radiusRaw : null;
+  const [sortKey, sortDir] = (searchParams.sort || "").split("-");
+  const sort = SORT_KEYS.includes(sortKey) && (sortDir === "asc" || sortDir === "desc") ? `${sortKey}-${sortDir}` : "";
+
+  const where: any = { moderationStatus: "published", status: "active" };
   if (categoryIds) where.categoryId = { in: categoryIds };
-  if (searchParams.q) {
+  if (q) {
     where.OR = [
-      { title: { contains: searchParams.q, mode: "insensitive" } },
-      { description: { contains: searchParams.q, mode: "insensitive" } },
-      { location: { contains: searchParams.q, mode: "insensitive" } },
+      { title: { contains: q, mode: "insensitive" } },
+      { description: { contains: q, mode: "insensitive" } },
+      { location: { contains: q, mode: "insensitive" } },
     ];
   }
   // Always exclude listings whose dates have already passed, even if the caller doesn't set
   // a "from" date — an already-expired listing is never a useful search result.
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const dateFromFilter = searchParams.dateFrom ? new Date(searchParams.dateFrom) : null;
-  where.dateEnd = { gte: dateFromFilter && dateFromFilter > todayStart ? dateFromFilter : todayStart };
-  if (searchParams.dateTo) where.dateStart = { lte: new Date(searchParams.dateTo) };
-  if (searchParams.priceMax) {
-    where.AND = [...(where.AND || []), { OR: [{ price: null }, { price: { lte: Number(searchParams.priceMax) } }] }];
-  }
+  const today = todayUtc();
+  where.dateEnd = { gte: dateFrom && dateFrom > today ? dateFrom : today };
+  if (dateTo) where.dateStart = { lte: dateTo };
+  if (priceMax != null) where.AND = [{ OR: [{ price: null }, { price: { lte: priceMax } }] }];
 
   const user = await getCurrentUser();
   // Your own listings are never a useful search result — they live under "My listings".
@@ -101,43 +137,46 @@ export default async function SearchPage(props: { searchParams: Promise<SearchPa
   const listings = await db.listing.findMany({
     where,
     orderBy: [{ boosted: "desc" }, { createdAt: "desc" }],
-    include: { category: { include: { parent: true } }, owner: true, photos: { take: 1 } },
-    take: 60,
+    include: { category: { include: { parent: true } }, owner: true, photos: { orderBy: { sortOrder: "asc" }, take: 1 } },
+    take: MAX_FETCH,
   });
+
+  let results = listings.map((l) => ({
+    ...l,
+    distance: lat != null && lng != null && l.lat != null && l.lng != null ? distanceKm(lat, lng, l.lat, l.lng) : null,
+  }));
+
+  // With a radius set, a listing with no coordinates can't be shown to be inside it.
+  if (lat != null && lng != null && radius) {
+    results = results.filter((l) => l.distance != null && l.distance <= radius);
+  }
+
+  if (sort) {
+    const [key, dir] = sort.split("-");
+    const mult = dir === "desc" ? -1 : 1;
+    results.sort((a, b) => mult * compareBy(key, a, b));
+  } else if (lat != null && lng != null) {
+    results.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+  }
+
+  const total = results.length;
+  const capped = listings.length >= MAX_FETCH;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageNum = Math.min(Math.max(1, Math.floor(finite(searchParams.page) ?? 1)), pageCount);
+  const pageItems = results.slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE);
 
   const savedIds = user
     ? new Set(
         (
           await db.savedListing.findMany({
-            where: { userId: user.id, listingId: { in: listings.map((l) => l.id) } },
+            where: { userId: user.id, listingId: { in: pageItems.map((l) => l.id) } },
             select: { listingId: true },
           })
         ).map((s) => s.listingId)
       )
     : new Set<string>();
 
-  const lat = searchParams.lat ? Number(searchParams.lat) : null;
-  const lng = searchParams.lng ? Number(searchParams.lng) : null;
-  const radius = searchParams.radius ? Number(searchParams.radius) : null;
-
-  let withDistance = listings.map((l) => ({
-    ...l,
-    distance: lat != null && lng != null && l.lat != null && l.lng != null ? distanceKm(lat, lng, l.lat, l.lng) : null,
-  }));
-
-  if (lat != null && lng != null && radius) {
-    withDistance = withDistance.filter((l) => l.distance == null || l.distance <= radius);
-  }
-
-  if (searchParams.sort) {
-    const [key, dir] = searchParams.sort.split("-");
-    const mult = dir === "desc" ? -1 : 1;
-    withDistance.sort((a, b) => mult * compareBy(key, a, b));
-  } else if (lat != null && lng != null) {
-    withDistance.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
-  }
-
-  const geoListings = withDistance.filter((l) => l.lat != null && l.lng != null);
+  const geoListings = results.filter((l) => l.lat != null && l.lng != null);
   const mapListings = geoListings.map((l) => ({
     id: l.id,
     title: l.title,
@@ -160,22 +199,25 @@ export default async function SearchPage(props: { searchParams: Promise<SearchPa
 
   const listPanel = (
     <div>
-      {withDistance.length === 0 ? (
+      {total === 0 ? (
         <div className="card p-8 text-center">
           <p className="text-slate text-sm">No listings match those filters yet. Try widening the date range or radius.</p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {withDistance.map((listing) => (
-            <ListingCard
-              key={listing.id}
-              listing={listing}
-              saved={savedIds.has(listing.id)}
-              showSave={!!user}
-              savePath="/search"
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {pageItems.map((listing) => (
+              <ListingCard
+                key={listing.id}
+                listing={listing}
+                saved={savedIds.has(listing.id)}
+                showSave={!!user}
+                savePath="/search"
+              />
+            ))}
+          </div>
+          <Pagination page={pageNum} pageCount={pageCount} params={searchParams} />
+        </>
       )}
     </div>
   );
@@ -195,9 +237,13 @@ export default async function SearchPage(props: { searchParams: Promise<SearchPa
       <aside className="space-y-5">
         <h2 className="font-display italic text-xl text-ink">Filters</h2>
         <form method="GET" className="space-y-5 card p-5">
+          {/* Carry the chosen sort through a filter change (it lives outside this form). */}
+          {sort && <input type="hidden" name="sort" value={sort} />}
           <div>
-            <label className="eyebrow text-slate">Search</label>
-            <input name="q" defaultValue={searchParams.q} placeholder="Keyword…" className="input mt-1.5" />
+            <label className="eyebrow text-slate" htmlFor="f-q">
+              Search
+            </label>
+            <input id="f-q" name="q" defaultValue={q} placeholder="Keyword…" maxLength={100} className="input mt-1.5" />
           </div>
 
           <div>
@@ -207,7 +253,7 @@ export default async function SearchPage(props: { searchParams: Promise<SearchPa
               defaultLat={searchParams.lat}
               defaultLng={searchParams.lng}
             />
-            <select name="radius" defaultValue={searchParams.radius || ""} className="input mt-2">
+            <select name="radius" defaultValue={searchParams.radius || ""} className="input mt-2" aria-label="Radius">
               <option value="">Any distance</option>
               {RADIUS_OPTIONS.map((r) => (
                 <option key={r} value={r}>
@@ -215,7 +261,7 @@ export default async function SearchPage(props: { searchParams: Promise<SearchPa
                 </option>
               ))}
             </select>
-            <p className="text-xs text-slate mt-1.5">Or click anywhere on the map to drop a point there.</p>
+            <p className="text-xs text-slate mt-1.5">Or switch to Map view and click anywhere to drop a point.</p>
           </div>
 
           <div>
@@ -230,6 +276,7 @@ export default async function SearchPage(props: { searchParams: Promise<SearchPa
                       value={top.slug}
                       defaultChecked={selectedSlugs.includes(top.slug)}
                       className="accent-ember"
+                      aria-label={top.name}
                     />
                     {top.name}
                     <span className="ml-auto text-slate">{top.children.length}</span>
@@ -271,8 +318,10 @@ export default async function SearchPage(props: { searchParams: Promise<SearchPa
             </div>
           </div>
           <div>
-            <label className="eyebrow text-slate">Max price (€)</label>
-            <input type="number" name="priceMax" defaultValue={searchParams.priceMax} className="input mt-1.5" />
+            <label className="eyebrow text-slate" htmlFor="f-price">
+              Max price (€)
+            </label>
+            <input id="f-price" type="number" min={0} name="priceMax" defaultValue={searchParams.priceMax} className="input mt-1.5" />
           </div>
           <button className="btn-primary w-full">Apply filters</button>
         </form>
@@ -281,10 +330,13 @@ export default async function SearchPage(props: { searchParams: Promise<SearchPa
       <div>
         <div className="mb-5 flex items-center justify-between gap-3">
           <p className="text-sm text-slate">
-            <span className="font-bold text-ink tabular-nums">{withDistance.length}</span> result
-            {withDistance.length === 1 ? "" : "s"}
+            <span className="font-bold text-ink tabular-nums">
+              {total}
+              {capped ? "+" : ""}
+            </span>{" "}
+            result{total === 1 && !capped ? "" : "s"}
           </p>
-          <SortSelect defaultValue={searchParams.sort} />
+          <SortSelect defaultValue={sort} />
         </div>
 
         <ResultsViewToggle list={listPanel} map={mapPanel} />

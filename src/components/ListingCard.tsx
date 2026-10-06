@@ -4,12 +4,14 @@ import SaveButton from "./SaveButton";
 import TrustedBadge from "./TrustedBadge";
 import { isTrustedHost } from "@/lib/trust";
 import { tripMeta } from "@/lib/dates";
+import { formatDateRange, formatPrice } from "@/lib/format";
 
 export type CardListing = {
   id: string;
   title: string;
   location: string;
   price: number | null;
+  currency?: string;
   priceNegotiable: boolean;
   boosted?: boolean;
   listingType?: string;
@@ -44,7 +46,13 @@ export default function ListingCard({
         className="card overflow-hidden block group hover:shadow-card-hover hover:-translate-y-1 transition-all duration-200"
       >
         {listing.photos[0] ? (
-          <img src={listing.photos[0].url} alt="" className="w-full aspect-[4/3] object-cover" />
+          <img
+            src={listing.photos[0].url}
+            alt={`${listing.title} — cover photo`}
+            loading="lazy"
+            decoding="async"
+            className="w-full aspect-[4/3] object-cover"
+          />
         ) : (
           <CategoryArt topSlug={topSlug} seed={listing.id} className="w-full aspect-[4/3]" />
         )}
@@ -74,18 +82,16 @@ export default function ListingCard({
           )}
           <div className="mt-4 text-sm">
             <span className="font-bold tabular-nums">
-              {listing.price ? `€${listing.price}` : "Free"}
+              {formatPrice(listing.price, listing.currency)}
               {listing.priceNegotiable && <span className="text-slate font-normal"> · negotiable</span>}
             </span>
             {listing.dateStart && listing.dateEnd && (
-              <div className="flex items-center justify-between mt-1 text-xs text-slate tabular-nums">
-                <span>
-                  {new Date(listing.dateStart).toLocaleDateString()} – {new Date(listing.dateEnd).toLocaleDateString()}
-                </span>
+              <div className="flex items-center justify-between gap-3 mt-1 text-xs text-slate tabular-nums">
+                <span>{formatDateRange(listing.dateStart, listing.dateEnd)}</span>
                 {(() => {
                   const { lengthLabel, aheadLabel } = tripMeta(listing.dateStart, listing.dateEnd);
                   return (
-                    <span>
+                    <span className="text-right">
                       {lengthLabel} · {aheadLabel}
                     </span>
                   );

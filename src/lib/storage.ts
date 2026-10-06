@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { MAX_PHOTO_BYTES, extForType, sniffImageType } from "./images";
 
 const BUCKET = "listing-photos";
 
@@ -11,7 +12,7 @@ function getClient() {
   if (!supabase) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_KEY;
-    if (!url || !key) throw new Error("Photo upload isn't configured (missing Supabase env vars).");
+    if (!url || !key) throw new Error("Photo upload is not configured (missing Supabase env vars).");
     // Publishable key only — it can write/read the listing-photos bucket per the RLS
     // policies set up for it, nothing more. Never use a service_role key here.
     supabase = createClient(url, key);
@@ -19,16 +20,22 @@ function getClient() {
   return supabase;
 }
 
-export async function uploadListingPhoto(file: File, listingId: string): Promise<string> {
-  const ext = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-  const path = `${listingId}/${crypto.randomUUID()}.${ext}`;
+// A problem with the file itself (shown to the user), as opposed to an infrastructure error.
+export class PhotoError extends Error {}
 
+// Validates (real image, size cap) and uploads. `folder` is a random id rather than the
+// listing id, so photos can be uploaded before the listing row exists — a failed upload
+// then never leaves a half-created listing behind.
+export async function uploadListingPhoto(file: File, folder: string): Promise<string> {
+  if (file.size > MAX_PHOTO_BYTES) throw new PhotoError(`"${file.name}" is larger than 5 MB.`);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const type = sniffImageType(bytes);
+  if (!type) throw new PhotoError(`"${file.name}" is not a JPEG, PNG, WebP or GIF image.`);
+
+  const path = `${folder}/${crypto.randomUUID()}.${extForType(type)}`;
   const client = getClient();
-  const { error } = await client.storage.from(BUCKET).upload(path, file, {
-    contentType: file.type || undefined,
-  });
+  const { error } = await client.storage.from(BUCKET).upload(path, bytes, { contentType: type });
   if (error) throw new Error(`Photo upload failed: ${error.message}`);
 
-  const { data } = client.storage.from(BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  return client.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 }

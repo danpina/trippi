@@ -22,6 +22,12 @@ model User {
   ratingCount  Int      @default(0)
   createdAt    DateTime @default(now())
 
+  acceptedTermsAt DateTime?
+  sessionVersion  Int       @default(0) // bumped on password change/reset to revoke old sessions
+  failedLogins    Int       @default(0)
+  lockedUntil     DateTime?
+
+  passwordResets  PasswordResetToken[]
   listings        Listing[]
   initiatedThreads Thread[]  @relation("Initiator")
   ownedThreads    Thread[]  @relation("ThreadOwner")
@@ -81,6 +87,7 @@ model Listing {
   savedBy SavedListing[]
 
   @@index([categoryId])
+  @@index([ownerId])
   @@index([dateStart, dateEnd])
   @@index([moderationStatus, status])
 }
@@ -103,11 +110,14 @@ model Thread {
   owner       User    @relation("ThreadOwner", fields: [ownerId], references: [id])
   status      String  @default("open") // open | closed
   createdAt   DateTime @default(now())
+  initiatorReadAt DateTime?
+  ownerReadAt     DateTime?
 
   messages Message[]
   ratings  Rating[]
 
   @@unique([listingId, initiatorId])
+  @@index([ownerId])
 }
 
 model Message {
@@ -157,4 +167,16 @@ model Report {
   reason     String
   status     String   @default("open") // open | resolved | dismissed
   createdAt  DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }

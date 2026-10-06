@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useActionState } from "react";
 import { submitReportAction } from "@/app/actions";
+import { useServerForm } from "@/lib/useServerForm";
 
 const REASONS = ["Spam or scam", "Inappropriate content", "Harassment or abuse", "Fake listing", "Other"];
 
@@ -16,7 +16,7 @@ export default function ReportForm({
   label: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState(submitReportAction, undefined);
+  const { state, pending, onSubmit } = useServerForm(submitReportAction);
 
   if (state?.success) {
     return <p className="text-xs text-slate mt-2">Thanks — this has been reported for review.</p>;
@@ -35,7 +35,7 @@ export default function ReportForm({
   }
 
   return (
-    <form action={formAction} className="mt-2 card p-4 space-y-2 max-w-sm">
+    <form onSubmit={onSubmit} className="mt-2 card p-4 space-y-2 max-w-sm">
       <input type="hidden" name="targetType" value={targetType} />
       <input type="hidden" name="targetId" value={targetId} />
       <label className="eyebrow text-slate">Reason</label>
@@ -52,7 +52,9 @@ export default function ReportForm({
       <textarea name="details" rows={2} className="input" placeholder="Optional details…" />
       {state?.error && <p className="text-xs text-ember-deep font-semibold">{state.error}</p>}
       <div className="flex gap-3 items-center pt-1">
-        <button className="btn-secondary !py-1.5 !px-3 text-xs">Submit report</button>
+        <button className="btn-secondary !py-1.5 !px-3 text-xs" disabled={pending}>
+          {pending ? "Sending…" : "Submit report"}
+        </button>
         <button type="button" onClick={() => setOpen(false)} className="text-xs text-slate hover:text-ink">
           Cancel
         </button>
