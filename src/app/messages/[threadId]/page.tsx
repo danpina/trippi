@@ -94,32 +94,44 @@ export default async function ThreadPage(props: { params: Promise<{ threadId: st
 
       <MessageForm threadId={thread.id} />
 
-      {bothReplied && (
+      {bothReplied && myRating && (
+        <div className="card p-5 mt-8 flex items-center justify-between gap-4 flex-wrap">
+          <p className="text-sm text-ink/85">
+            You rated {other.name}{" "}
+            <span className="text-gold font-bold" aria-label={`${myRating.score} out of 5`}>
+              {"★".repeat(myRating.score)}
+              <span className="text-line">{"★".repeat(5 - myRating.score)}</span>
+            </span>
+          </p>
+          <Link href="/messages#ratings" className="text-sm text-ember font-semibold hover:underline">
+            Edit or delete in Your ratings →
+          </Link>
+        </div>
+      )}
+
+      {bothReplied && !myRating && (
         <div className="card p-6 mt-8">
           <h2 className="font-display italic text-xl text-ink mb-1">Rate {other.name}</h2>
-          <p className="text-sm text-slate mb-4">
-            {myRating ? "You already rated this conversation — submitting again updates it." : "How did it go?"}
-          </p>
+          <p className="text-sm text-slate mb-4">How did it go?</p>
           <form action={submitRatingAction} className="space-y-3">
             <input type="hidden" name="threadId" value={thread.id} />
             <div className="flex gap-3">
               {[1, 2, 3, 4, 5].map((n) => (
                 <label key={n} className="flex flex-col items-center gap-1 text-xs text-slate cursor-pointer">
-                  <input type="radio" name="score" value={n} defaultChecked={myRating?.score === n} required className="accent-ember" />
+                  <input type="radio" name="score" value={n} required className="accent-ember" />
                   {n}★
                 </label>
               ))}
             </div>
             <textarea
               name="comment"
-              defaultValue={myRating?.comment ?? ""}
               rows={2}
               maxLength={1000}
               className="input"
               placeholder="Optional note about the experience"
               aria-label="Rating comment"
             />
-            <button className="btn-primary">{myRating ? "Update rating" : "Submit rating"}</button>
+            <button className="btn-primary">Submit rating</button>
           </form>
         </div>
       )}

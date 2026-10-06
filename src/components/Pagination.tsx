@@ -6,10 +6,12 @@ export default function Pagination({
   page,
   pageCount,
   params,
+  basePath = "/search",
 }: {
   page: number;
   pageCount: number;
   params: Record<string, string | string[] | undefined>;
+  basePath?: string;
 }) {
   if (pageCount <= 1) return null;
 
@@ -21,7 +23,7 @@ export default function Pagination({
     }
     if (p > 1) sp.set("page", String(p));
     const qs = sp.toString();
-    return `/search${qs ? `?${qs}` : ""}`;
+    return `${basePath}${qs ? `?${qs}` : ""}`;
   }
 
   const pages = new Set([1, pageCount, page - 1, page, page + 1]);

@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import Link from "next/link";
 import { db } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
 import { adminModerateAction, dismissReportAction } from "@/app/actions";
 import { formatDate } from "@/lib/format";
 
-export default async function AdminPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/admin");
-  if (!user.isAdmin) redirect("/");
+export const metadata: Metadata = { title: "Moderation" };
 
+export default async function AdminPage() {
   const [flagged, pending, rawReports] = await Promise.all([
     db.listing.findMany({
       where: { moderationStatus: "flagged" },
@@ -24,7 +21,7 @@ export default async function AdminPage() {
     db.report.findMany({
       where: { status: "open" },
       orderBy: { createdAt: "desc" },
-      take: 20,
+      take: 50,
       include: { reporter: true },
     }),
   ]);
@@ -35,28 +32,28 @@ export default async function AdminPage() {
     rawReports.map(async (r) => {
       let targetLabel = r.targetId;
       let targetHref: string | null = null;
+      let manageHref: string | null = null;
       if (r.targetType === "listing") {
         const l = await db.listing.findUnique({ where: { id: r.targetId } });
         targetLabel = l?.title ?? "(listing no longer exists)";
         targetHref = l ? `/listings/${l.id}` : null;
+        manageHref = l ? `/admin/listings?q=${encodeURIComponent(l.title)}` : null;
       } else if (r.targetType === "user") {
         const u = await db.user.findUnique({ where: { id: r.targetId } });
         targetLabel = u?.name ?? "(user no longer exists)";
         targetHref = u ? `/users/${u.id}` : null;
+        manageHref = u ? `/admin/users/${u.id}` : null;
       }
-      return { ...r, targetLabel, targetHref };
+      return { ...r, targetLabel, targetHref, manageHref };
     })
   );
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-14 space-y-12">
-      <div>
-        <p className="eyebrow text-ember">Admin</p>
-        <h1 className="font-display text-3xl font-medium text-ink mt-1">Moderation queue</h1>
-        <p className="text-sm text-slate mt-1">
-          Listings the rule engine flagged land here for a human call, rather than being auto-rejected.
-        </p>
-      </div>
+    <div className="space-y-12">
+      <p className="text-sm text-slate">
+        Listings the rule engine flagged land here for a human call, rather than being auto-rejected. To browse or
+        change anything else, use the Listings and Users tabs.
+      </p>
 
       <section>
         <div className="flex items-center gap-2 mb-4">
@@ -67,11 +64,17 @@ export default async function AdminPage() {
         <div className="space-y-3">
           {flagged.map((l) => (
             <div key={l.id} className="card p-5">
-              <div className="flex justify-between items-start gap-4">
-                <div>
-                  <div className="font-display font-medium text-lg">{l.title}</div>
+              <div className="flex justify-between items-start gap-4 flex-wrap">
+                <div className="min-w-0">
+                  <Link href={`/listings/${l.id}`} className="font-display font-medium text-lg hover:text-ember">
+                    {l.title}
+                  </Link>
                   <div className="text-sm text-slate">
-                    {l.category.name} · by {l.owner.name} · {l.location}
+                    {l.category.name} · by{" "}
+                    <Link href={`/admin/users/${l.ownerId}`} className="hover:text-ember underline underline-offset-2">
+                      {l.owner.name}
+                    </Link>{" "}
+                    · {l.location}
                   </div>
                   <div className="text-sm text-ember-deep mt-2">{l.moderationNotes}</div>
                 </div>
@@ -98,9 +101,11 @@ export default async function AdminPage() {
         {pending.length === 0 && <p className="text-sm text-slate">Nothing pending.</p>}
         <div className="space-y-3">
           {pending.map((l) => (
-            <div key={l.id} className="card p-5 flex justify-between items-center">
+            <div key={l.id} className="card p-5 flex justify-between items-center gap-4 flex-wrap">
               <div>
-                <div className="font-display font-medium text-lg">{l.title}</div>
+                <Link href={`/listings/${l.id}`} className="font-display font-medium text-lg hover:text-ember">
+                  {l.title}
+                </Link>
                 <div className="text-sm text-slate">
                   {l.category.name} · by {l.owner.name}
                 </div>
@@ -125,8 +130,8 @@ export default async function AdminPage() {
         <div className="space-y-3">
           {reports.map((r) => (
             <div key={r.id} className="card p-4">
-              <div className="flex justify-between items-start gap-4">
-                <div className="text-sm">
+              <div className="flex justify-between items-start gap-4 flex-wrap">
+                <div className="text-sm min-w-0">
                   <span className="tag tag-warm">{r.targetType}</span>{" "}
                   {r.targetHref ? (
                     <a href={r.targetHref} className="font-semibold text-ink hover:text-ember">
@@ -140,10 +145,17 @@ export default async function AdminPage() {
                     reported by {r.reporter.name} · {formatDate(r.createdAt)}
                   </div>
                 </div>
-                <form action={dismissReportAction} className="shrink-0">
-                  <input type="hidden" name="reportId" value={r.id} />
-                  <button className="btn-secondary !py-1.5 !px-3 text-xs">Dismiss</button>
-                </form>
+                <div className="flex gap-2 shrink-0">
+                  {r.manageHref && (
+                    <Link href={r.manageHref} className="btn-secondary !py-1.5 !px-3 text-xs">
+                      Manage
+                    </Link>
+                  )}
+                  <form action={dismissReportAction}>
+                    <input type="hidden" name="reportId" value={r.id} />
+                    <button className="btn-secondary !py-1.5 !px-3 text-xs">Dismiss</button>
+                  </form>
+                </div>
               </div>
             </div>
           ))}
@@ -152,5 +164,3 @@ export default async function AdminPage() {
     </div>
   );
 }
-
-export const metadata: Metadata = { title: "Moderation" };

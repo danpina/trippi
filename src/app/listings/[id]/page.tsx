@@ -93,6 +93,24 @@ export default async function ListingDetailPage(props: { params: Promise<{ id: s
           </div>
         )}
 
+        {(isOwner || user?.isAdmin) && (
+          <div className="flex gap-3 mb-4 text-sm font-semibold">
+            <Link href={`/listings/${listing.id}/edit`} className="text-ember hover:underline">
+              Edit listing
+            </Link>
+            {user?.isAdmin && (
+              <>
+                <Link href="/admin/listings" className="text-slate hover:text-ink hover:underline">
+                  Admin: all listings
+                </Link>
+                <Link href={`/admin/users/${listing.ownerId}`} className="text-slate hover:text-ink hover:underline">
+                  Admin: manage owner
+                </Link>
+              </>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center gap-2 mb-3">
           <span className="tag">{listing.category.name}</span>
           <span className="tag tag-warm">{listing.listingType === "opportunity" ? "Opportunity" : "Plan"}</span>

@@ -24,6 +24,7 @@ import { sendEmail } from "@/lib/email";
 import { notifyNewMessage } from "@/lib/notify";
 import { SITE_URL } from "@/lib/site";
 import { todayUtc } from "@/lib/dates";
+import { deleteUserCascade } from "@/lib/deletion";
 
 // Expected, user-facing failures (bad password, validation) are returned as form state
 // rather than thrown — Next.js redacts thrown Server Action errors in production down to a
@@ -371,6 +372,8 @@ export async function setListingStatusAction(formData: FormData) {
 
   await db.listing.update({ where: { id: listingId }, data: { status } });
   revalidatePath("/listings/mine");
+  revalidatePath("/admin/listings");
+  revalidatePath("/search");
 }
 
 // ───────────────────────────── Messaging ─────────────────────────────
@@ -500,6 +503,21 @@ export async function submitRatingAction(formData: FormData) {
 
   await recomputeUserRating(rateeId);
   revalidatePath(`/messages/${threadId}`);
+  revalidatePath("/messages");
+}
+
+export async function deleteRatingAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("You must be logged in.");
+
+  const rating = await db.rating.findUnique({ where: { id: text(formData, "ratingId") } });
+  if (!rating || rating.raterId !== user.id) throw new Error("Not your rating.");
+
+  await db.rating.delete({ where: { id: rating.id } });
+  await recomputeUserRating(rating.rateeId);
+  revalidatePath("/messages");
+  revalidatePath(`/messages/${rating.threadId}`);
+  revalidatePath(`/users/${rating.rateeId}`);
 }
 
 // ───────────────────────────── Reports & moderation ─────────────────────────────
@@ -558,6 +576,8 @@ export async function adminModerateAction(formData: FormData) {
   });
 
   revalidatePath("/admin");
+  revalidatePath("/admin/listings");
+  revalidatePath("/search");
 }
 
 export async function dismissReportAction(formData: FormData) {
@@ -654,36 +674,7 @@ export async function deleteAccountAction(prevState: SettingsState, formData: Fo
     return { error: "You're the only admin — promote another admin before deleting this account." };
   }
 
-  const uid = user.id;
-  const listingIds = (await db.listing.findMany({ where: { ownerId: uid }, select: { id: true } })).map((l) => l.id);
-  const threads = await db.thread.findMany({
-    where: { OR: [{ initiatorId: uid }, { ownerId: uid }, { listingId: { in: listingIds } }] },
-    select: { id: true, initiatorId: true, ownerId: true },
-  });
-  const threadIds = threads.map((t) => t.id);
-  const counterparts = new Set(threads.flatMap((t) => [t.initiatorId, t.ownerId]).filter((id) => id !== uid));
-
-  await db.$transaction([
-    db.rating.deleteMany({ where: { threadId: { in: threadIds } } }),
-    db.message.deleteMany({ where: { threadId: { in: threadIds } } }),
-    db.thread.deleteMany({ where: { id: { in: threadIds } } }),
-    db.savedListing.deleteMany({ where: { OR: [{ userId: uid }, { listingId: { in: listingIds } }] } }),
-    db.listingPhoto.deleteMany({ where: { listingId: { in: listingIds } } }),
-    db.report.deleteMany({
-      where: {
-        OR: [
-          { reporterId: uid },
-          { targetType: "user", targetId: uid },
-          { targetType: "listing", targetId: { in: listingIds } },
-        ],
-      },
-    }),
-    db.listing.deleteMany({ where: { ownerId: uid } }),
-    db.passwordResetToken.deleteMany({ where: { userId: uid } }),
-    db.user.delete({ where: { id: uid } }),
-  ]);
-
-  for (const id of counterparts) await recomputeUserRating(id);
+  await deleteUserCascade(user.id);
 
   await clearSessionCookie();
   redirect("/?deleted=1");
