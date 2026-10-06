@@ -38,8 +38,11 @@ export default function MessageForm({ threadId }: { threadId: string }) {
           aria-label="Message"
           onInput={resize}
           onKeyDown={(e) => {
-            // Enter sends, Shift+Enter adds a line break (and never while composing, e.g. IME).
-            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+            // Desktop: Enter sends, Shift+Enter adds a line break (never while composing, e.g.
+            // IME). On touch devices (no Shift key) Enter must stay a line break — the Send
+            // button is how you send.
+            const touch = window.matchMedia("(pointer: coarse)").matches;
+            if (e.key === "Enter" && !touch && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();
               e.currentTarget.form?.requestSubmit();
             }
@@ -54,7 +57,7 @@ export default function MessageForm({ threadId }: { threadId: string }) {
           {state.error}
         </p>
       )}
-      <p className="text-xs text-slate mt-1.5">Enter to send · Shift+Enter for a new line</p>
+      <p className="hidden [@media(pointer:fine)]:block text-xs text-slate mt-1.5">Enter to send · Shift+Enter for a new line</p>
     </form>
   );
 }
