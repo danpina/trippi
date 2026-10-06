@@ -317,7 +317,7 @@ export default async function SearchPage(props: { searchParams: Promise<SearchPa
             <div className="mt-1.5 mb-3">
               <DateQuickPicks />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-1 gap-2">
               <div>
                 <input type="date" name="dateFrom" defaultValue={searchParams.dateFrom} className="input" aria-label="From date" />
               </div>

@@ -135,3 +135,23 @@ body {
   opacity: 0.55;
   pointer-events: none;
 }
+
+/* Date inputs have an intrinsic minimum width in iOS Safari (and some Android browsers) that
+   pushes them past their column. Let them shrink to the grid cell, and let grid cells shrink. */
+.grid > * {
+  min-width: 0;
+}
+input[type="date"].input {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 2.75rem;
+  text-align: left;
+}
+input[type="date"].input::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 1.2em;
+}
