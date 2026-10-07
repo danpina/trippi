@@ -8,10 +8,11 @@
     "start": "next start",
     "lint": "eslint src",
     "db:seed": "tsx prisma/seed.ts",
-    "db:push": "prisma db push",
+    "db:push": "prisma db push && node scripts/secure-db.mjs",
     "postinstall": "prisma generate && node scripts/copy-maplibre-worker.mjs",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:secure": "node scripts/secure-db.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",

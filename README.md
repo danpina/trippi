@@ -133,6 +133,14 @@ wrong causes two different failure modes:**
   `P1017: Server has closed the connection`, because transaction mode doesn't support the kind
   of connection `prisma db push` needs.
 
+**Lock the database against Supabase's public API.** Supabase exposes every table in the `public`
+schema over HTTP to anyone with the project's publishable key (which is embedded in the site's
+JavaScript). The app never uses that API for data — it talks to Postgres directly through Prisma —
+so `scripts/secure-db.mjs` enables Row-Level Security on every table with no policies and revokes
+the API roles' privileges. `npm run db:push` runs it automatically; if you create tables any
+other way, run `npm run db:secure` afterwards. Storage (the `listing-photos` bucket) is a separate
+system and is unaffected.
+
 `prisma/schema.prisma`'s `datasource` block declares both `url` (→ `DATABASE_URL`) and
 `directUrl` (→ `DIRECT_URL`) for exactly this split — Prisma uses `directUrl` automatically for
 migration commands and `url` for everything else.
